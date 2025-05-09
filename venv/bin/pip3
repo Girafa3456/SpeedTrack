@@ -1,4 +1,4 @@
-#!/home/goncalo/Documentos/BD/venv/bin/python3
+#!/home/goncalo/Documentos/BD/Project/SpeedTrack/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
