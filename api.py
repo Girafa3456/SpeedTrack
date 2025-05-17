@@ -51,7 +51,64 @@ def execute_query(query, params=None, fetch=True):
 
 ### Endpoints ###
 ## Models ##
-# Person
+# Person #
+# POST
+@app.route('/api/persons', methods=['POST'])
+def create_person():
+    data = request.get_json()
+    query = """
+    INSERT INTO Person (nif, name, birth_date, nationality)
+    VALUES (?, ?, ?, ?)
+    """
+    params = (
+        data['nif'],
+        data['name'],
+        parse_date(data['birth_date']),
+        data['nationality']
+    )
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Person created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# UPDATE
+@app.route('/api/persons/<string:nif>', methods=['PUT'])
+def update_person(nif):
+    data = request.get_json()
+    query = """
+    UPDATE Person 
+    SET name = ?, birth_date = ?, nationality = ?
+    WHERE nif = ?
+    """
+    params = (
+        data.get('name'),
+        parse_date(data.get('birth_date')),
+        data.get('nationality'),
+        nif
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Person not found'}), 404
+        return jsonify({'message': 'Person updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# DELETE
+@app.route('/api/persons/<string:nif>', methods=['DELETE'])
+def delete_person(nif):
+    query = "DELETE FROM Person WHERE nif = ?"
+    try:
+        affected_rows = execute_query(query, (nif,), fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Person not found'}), 404
+        return jsonify({'message': 'Person deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+# GET
 @app.route('/api/persons', methods=['GET'])
 def get_persons():
     query = "SELECT * FROM Person"
@@ -69,53 +126,66 @@ def get_person(nif):
     person[0]['birth_date'] = person[0]['birth_date'].isoformat() if person[0]['birth_date'] else None
     return jsonify(person[0])
 
-# Team
-@app.route('/api/teams', methods=['GET'])
-def get_teams():
+# Driver #
+# POST
+@app.route('/api/drivers', methods=['POST'])
+def create_driver():
+    data = request.get_json()
     query = """
-    SELECT t.*, 
-           (SELECT COUNT(*) FROM Driver d WHERE d.team_id = t.team_id) as driver_count,
-           (SELECT COUNT(*) FROM Sponsor s WHERE s.team_id = t.team_id) as sponsor_count
-    FROM Team t
+    INSERT INTO Driver (driver_id, total_points, wins, pole_positions, nif, team_id)
+    VALUES (?, ?, ?, ?, ?, ?)
     """
-    teams = execute_query(query)
-    for t in teams:
-        t['budget'] = float(t['budget']) if t['budget'] is not None else 0.0
-    return jsonify(teams)
-
-@app.route('/api/teams/<int:team_id>', methods=['GET'])
-def get_team(team_id):
-    team_query = "SELECT * FROM Team WHERE team_id = ?"
-    team = execute_query(team_query, (team_id,))
-    if not team:
-        return jsonify({'error': 'Team not found'}), 404
+    params = (
+        data['driver_id'],
+        data.get('total_points', 0),
+        data.get('wins', 0),
+        data.get('pole_positions', 0),
+        data['nif'],
+        data['team_id']
+    )
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Driver created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
     
-
-    drivers_query = """
-    SELECT d.driver_id, p.name 
-    FROM Driver d
-    JOIN Person p ON d.nif = p.nif
-    WHERE d.team_id = ?
+# UPDATE
+@app.route('/api/drivers/<int:driver_id>', methods=['PUT'])
+def update_driver(driver_id):
+    data = request.get_json()
+    query = """
+    UPDATE Driver 
+    SET total_points = ?, wins = ?, pole_positions = ?, team_id = ?
+    WHERE driver_id = ?
     """
-    drivers = execute_query(drivers_query, (team_id,))
-
-    sponsors_query = """
-    SELECT s.sponsor_id, p.name, s.contract_value
-    FROM Sponsor s
-    JOIN Person p ON s.nif = p.nif
-    WHERE s.team_id = ?
-    """
-    sponsors = execute_query(sponsors_query, (team_id,))
-    for s in sponsors:
-        s['contract_value'] = float(s['contract_value']) if s['contract_value'] is not None else 0.0
+    params = (
+        data.get('total_points'),
+        data.get('wins'),
+        data.get('pole_positions'),
+        data.get('team_id'),
+        driver_id
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Driver not found'}), 404
+        return jsonify({'message': 'Driver updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
     
-    team[0]['drivers'] = drivers
-    team[0]['sponsors'] = sponsors
-    team[0]['budget'] = float(team[0]['budget']) if team[0]['budget'] is not None else 0.0
+# DELETE
+@app.route('/api/drivers/<int:driver_id>', methods=['DELETE'])
+def delete_driver(driver_id):
+    query = "DELETE FROM Driver WHERE driver_id = ?"
+    try:
+        affected_rows = execute_query(query, (driver_id,), fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Driver not found'}), 404
+        return jsonify({'message': 'Driver deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
     
-    return jsonify(team[0])
-
-# Driver
+# GET
 @app.route('/api/drivers', methods=['GET'])
 def get_drivers():
     query = """
@@ -166,8 +236,402 @@ def get_driver(driver_id):
     }
     
     return jsonify(response)
+# Sponsor #
+# POST
+@app.route('/api/sponsors', methods=['POST'])
+def create_sponsor():
+    data = request.get_json()
+    query = """
+    INSERT INTO Sponsor (sponsor_id, contract_value, sector, team_id, nif)
+    VALUES (?, ?, ?, ?, ?)
+    """
+    params = (
+        data['sponsor_id'],
+        data['contract_value'],
+        data['sector'],
+        data['team_id'],
+        data['nif']
+    )
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Sponsor created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
-# Car
+# UPDATE
+@app.route('/api/sponsors/<int:sponsor_id>', methods=['PUT'])
+def update_sponsor(sponsor_id):
+    data = request.get_json()
+    query = """
+    UPDATE Sponsor 
+    SET contract_value = ?, sector = ?, team_id = ?
+    WHERE sponsor_id = ?
+    """
+    params = (
+        data.get('contract_value'),
+        data.get('sector'),
+        data.get('team_id'),
+        sponsor_id
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Sponsor not found'}), 404
+        return jsonify({'message': 'Sponsor updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+# DELETE
+@app.route('/api/sponsors/<int:sponsor_id>', methods=['DELETE'])
+def delete_sponsor(sponsor_id):
+    query = "DELETE FROM Sponsor WHERE sponsor_id = ?"
+    try:
+        affected_rows = execute_query(query, (sponsor_id,), fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Sponsor not found'}), 404
+        return jsonify({'message': 'Sponsor deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
+@app.route('/api/sponsors', methods=['GET'])
+def get_sponsors():
+    query = """
+    SELECT s.sponsor_id, p.name, p.birth_date, p.nationality, 
+           s.contract_value, s.sector, t.name as team_name, t.team_id
+    FROM Sponsor s
+    JOIN Person p ON s.nif = p.nif
+    JOIN Team t ON s.team_id = t.team_id
+    """
+    sponsors = execute_query(query)
+    for s in sponsors:
+        s['birth_date'] = s['birth_date'].isoformat() if s['birth_date'] else None
+        s['contract_value'] = float(s['contract_value']) if s['contract_value'] is not None else 0.0
+    return jsonify(sponsors)
+
+@app.route('/api/sponsors/<int:sponsor_id>', methods=['GET'])
+def get_sponsor(sponsor_id):
+    sponsor_query = """
+    SELECT s.sponsor_id, p.name, p.birth_date, p.nationality, 
+           s.contract_value, s.sector, t.name as team_name, t.team_id
+    FROM Sponsor s
+    JOIN Person p ON s.nif = p.nif
+    JOIN Team t ON s.team_id = t.team_id
+    WHERE s.sponsor_id = ?
+    """
+    sponsor = execute_query(sponsor_query, (sponsor_id,))
+    if not sponsor:
+        return jsonify({'error': 'Sponsor not found'}), 404
+    
+    sponsorships_query = """
+    SELECT sp.start_date, sp.end_date, t.name as team_name, t.team_id
+    FROM Sponsorship sp
+    JOIN Team t ON sp.team_id = t.team_id
+    WHERE sp.sponsor_id = ?
+    """
+    sponsorships = execute_query(sponsorships_query, (sponsor_id,))
+    for s in sponsorships:
+        s['start_date'] = s['start_date'].isoformat() if s['start_date'] else None
+        s['end_date'] = s['end_date'].isoformat() if s['end_date'] else None
+    
+    response = {
+        'sponsor_id': sponsor[0]['sponsor_id'],
+        'name': sponsor[0]['name'],
+        'birth_date': sponsor[0]['birth_date'].isoformat() if sponsor[0]['birth_date'] else None,
+        'nationality': sponsor[0]['nationality'],
+        'contract_value': float(sponsor[0]['contract_value']) if sponsor[0]['contract_value'] is not None else 0.0,
+        'sector': sponsor[0]['sector'],
+        'team': {
+            'team_id': sponsor[0]['team_id'],
+            'name': sponsor[0]['team_name']
+        },
+        'sponsorships': sponsorships
+    }
+    
+    return jsonify(response)
+
+# Mechanic #
+# POST
+@app.route('/api/mechanics', methods=['POST'])
+def create_mechanic():
+    data = request.get_json()
+    query = """
+    INSERT INTO Mechanic (mechanic_id, specialty, experience, team_id, nif)
+    VALUES (?, ?, ?, ?, ?)
+    """
+    params = (
+        data['mechanic_id'],
+        data['specialty'],
+        data['experience'],
+        data['team_id'],
+        data['nif']
+    )
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Mechanic created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# UPDATE
+@app.route('/api/mechanics/<int:mechanic_id>', methods=['PUT'])
+def update_mechanic(mechanic_id):
+    data = request.get_json()
+    query = """
+    UPDATE Mechanic 
+    SET specialty = ?, experience = ?, team_id = ?
+    WHERE mechanic_id = ?
+    """
+    params = (
+        data.get('specialty'),
+        data.get('experience'),
+        data.get('team_id'),
+        mechanic_id
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Mechanic not found'}), 404
+        return jsonify({'message': 'Mechanic updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# DELETE
+@app.route('/api/mechanics/<int:mechanic_id>', methods=['DELETE'])
+def delete_mechanic(mechanic_id):
+    query = "DELETE FROM Mechanic WHERE mechanic_id = ?"
+    try:
+        affected_rows = execute_query(query, (mechanic_id,), fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Mechanic not found'}), 404
+        return jsonify({'message': 'Mechanic deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
+@app.route('/api/mechanics', methods=['GET'])
+def get_mechanics():
+    query = """
+    SELECT m.mechanic_id, p.name, p.birth_date, p.nationality, 
+           m.specialty, m.experience, t.name as team_name, t.team_id
+    FROM Mechanic m
+    JOIN Person p ON m.nif = p.nif
+    JOIN Team t ON m.team_id = t.team_id
+    """
+    mechanics = execute_query(query)
+    for m in mechanics:
+        m['birth_date'] = m['birth_date'].isoformat() if m['birth_date'] else None
+    return jsonify(mechanics)
+
+@app.route('/api/mechanics/<int:mechanic_id>', methods=['GET'])
+def get_mechanic(mechanic_id):
+    mechanic_query = """
+    SELECT m.mechanic_id, p.name, p.birth_date, p.nationality, 
+           m.specialty, m.experience, t.name as team_name, t.team_id
+    FROM Mechanic m
+    JOIN Person p ON m.nif = p.nif
+    JOIN Team t ON m.team_id = t.team_id
+    WHERE m.mechanic_id = ?
+    """
+    mechanic = execute_query(mechanic_query, (mechanic_id,))
+    if not mechanic:
+        return jsonify({'error': 'Mechanic not found'}), 404
+    
+    works_on_query = """
+    SELECT w.idate, w.edate, c.car_id, c.number as car_number, 
+           t.name as team_name, t.team_id
+    FROM Works_On w
+    JOIN Car c ON w.car_id = c.car_id
+    JOIN Team t ON c.team_id = t.team_id
+    WHERE w.mechanic_id = ?
+    """
+    works_on = execute_query(works_on_query, (mechanic_id,))
+    for w in works_on:
+        w['idate'] = w['idate'].isoformat() if w['idate'] else None
+        w['edate'] = w['edate'].isoformat() if w['edate'] else None
+    
+    response = {
+        'mechanic_id': mechanic[0]['mechanic_id'],
+        'name': mechanic[0]['name'],
+        'birth_date': mechanic[0]['birth_date'].isoformat() if mechanic[0]['birth_date'] else None,
+        'nationality': mechanic[0]['nationality'],
+        'specialty': mechanic[0]['specialty'],
+        'experience': mechanic[0]['experience'],
+        'team': {
+            'team_id': mechanic[0]['team_id'],
+            'name': mechanic[0]['team_name']
+        },
+        'works_on': works_on
+    }
+    
+    return jsonify(response)
+
+# Team #
+# POST
+@app.route('/api/teams', methods=['POST'])
+def create_team():
+    data = request.get_json()
+    query = """
+    INSERT INTO Team (team_id, name, budget)
+    VALUES (?, ?, ?)
+    """
+    params = (
+        data['team_id'],
+        data['name'],
+        data['budget']
+    )
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Team created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# UPDATE
+@app.route('/api/teams/<int:team_id>', methods=['PUT'])
+def update_team(team_id):
+    data = request.get_json()
+    query = """
+    UPDATE Team 
+    SET name = ?, budget = ?
+    WHERE team_id = ?
+    """
+    params = (
+        data.get('name'),
+        data.get('budget'),
+        team_id
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Team not found'}), 404
+        return jsonify({'message': 'Team updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# DELETE
+@app.route('/api/teams/<int:team_id>', methods=['DELETE'])
+def delete_team(team_id):
+    query = "DELETE FROM Team WHERE team_id = ?"
+    try:
+        affected_rows = execute_query(query, (team_id,), fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Team not found'}), 404
+        return jsonify({'message': 'Team deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
+@app.route('/api/teams', methods=['GET'])
+def get_teams():
+    query = """
+    SELECT t.*, 
+           (SELECT COUNT(*) FROM Driver d WHERE d.team_id = t.team_id) as driver_count,
+           (SELECT COUNT(*) FROM Sponsor s WHERE s.team_id = t.team_id) as sponsor_count
+    FROM Team t
+    """
+    teams = execute_query(query)
+    for t in teams:
+        t['budget'] = float(t['budget']) if t['budget'] is not None else 0.0
+    return jsonify(teams)
+
+@app.route('/api/teams/<int:team_id>', methods=['GET'])
+def get_team(team_id):
+    team_query = "SELECT * FROM Team WHERE team_id = ?"
+    team = execute_query(team_query, (team_id,))
+    if not team:
+        return jsonify({'error': 'Team not found'}), 404
+    
+
+    drivers_query = """
+    SELECT d.driver_id, p.name 
+    FROM Driver d
+    JOIN Person p ON d.nif = p.nif
+    WHERE d.team_id = ?
+    """
+    drivers = execute_query(drivers_query, (team_id,))
+
+    sponsors_query = """
+    SELECT s.sponsor_id, p.name, s.contract_value
+    FROM Sponsor s
+    JOIN Person p ON s.nif = p.nif
+    WHERE s.team_id = ?
+    """
+    sponsors = execute_query(sponsors_query, (team_id,))
+    for s in sponsors:
+        s['contract_value'] = float(s['contract_value']) if s['contract_value'] is not None else 0.0
+    
+    team[0]['drivers'] = drivers
+    team[0]['sponsors'] = sponsors
+    team[0]['budget'] = float(team[0]['budget']) if team[0]['budget'] is not None else 0.0
+    
+    return jsonify(team[0])
+
+# Car #
+# POST
+@app.route('/api/cars', methods=['POST'])
+def create_car():
+    data = request.get_json()
+    query = """
+    INSERT INTO Car (car_id, number, chassis_model, engine_type, weight, manufacture_date, team_id, driver_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    params = (
+        data['car_id'],
+        data['number'],
+        data['chassis_model'],
+        data['engine_type'],
+        data['weight'],
+        parse_date(data['manufacture_date']),
+        data['team_id'],
+        data['driver_id']
+    )
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Car created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# UPDATE
+@app.route('/api/cars/<int:car_id>', methods=['PUT'])
+def update_car(car_id):
+    data = request.get_json()
+    query = """
+    UPDATE Car 
+    SET number = ?, chassis_model = ?, engine_type = ?, weight = ?, 
+        manufacture_date = ?, team_id = ?, driver_id = ?
+    WHERE car_id = ?
+    """
+    params = (
+        data.get('number'),
+        data.get('chassis_model'),
+        data.get('engine_type'),
+        data.get('weight'),
+        parse_date(data.get('manufacture_date')),
+        data.get('team_id'),
+        data.get('driver_id'),
+        car_id
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Car not found'}), 404
+        return jsonify({'message': 'Car updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+# DELETE
+@app.route('/api/cars/<int:car_id>', methods=['DELETE'])
+def delete_car(car_id):
+    query = "DELETE FROM Car WHERE car_id = ?"
+    try:
+        affected_rows = execute_query(query, (car_id,), fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Car not found'}), 404
+        return jsonify({'message': 'Car deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
 @app.route('/api/cars', methods=['GET'])
 def get_cars():
     query = """
@@ -225,7 +689,65 @@ def get_car(car_id):
     
     return jsonify(response)
 
-# Race
+# Race #
+# POST
+@app.route('/api/races', methods=['POST'])
+def create_race():
+    data = request.get_json()
+    query = """
+    INSERT INTO Race (race_id, circuit, date, track, weather_conditions)
+    VALUES (?, ?, ?, ?, ?)
+    """
+    params = (
+        data['race_id'],
+        data['circuit'],
+        parse_date(data['date']),
+        data['track'],
+        data['weather_conditions']
+    )
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Race created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# UPDATE
+@app.route('/api/races/<int:race_id>', methods=['PUT'])
+def update_race(race_id):
+    data = request.get_json()
+    query = """
+    UPDATE Race 
+    SET circuit = ?, date = ?, track = ?, weather_conditions = ?
+    WHERE race_id = ?
+    """
+    params = (
+        data.get('circuit'),
+        parse_date(data.get('date')),
+        data.get('track'),
+        data.get('weather_conditions'),
+        race_id
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Race not found'}), 404
+        return jsonify({'message': 'Race updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# DELETE
+@app.route('/api/races/<int:race_id>', methods=['DELETE'])
+def delete_race(race_id):
+    query = "DELETE FROM Race WHERE race_id = ?"
+    try:
+        affected_rows = execute_query(query, (race_id,), fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Race not found'}), 404
+        return jsonify({'message': 'Race deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
 @app.route('/api/races', methods=['GET'])
 def get_races():
     query = """
