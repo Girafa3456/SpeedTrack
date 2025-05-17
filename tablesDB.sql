@@ -1,5 +1,4 @@
-CREATE DATABASE IF NOT EXISTS SpeedTrackRacing;
-USE SpeedTrackRacing;
+USE p6g9;
 
 
 CREATE TABLE IF NOT EXISTS Person (

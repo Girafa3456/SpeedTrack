@@ -1,357 +1,356 @@
 from flask import Flask, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-
-from f_utils import parse_date
+import pyodbc
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
-# Change this to the right URL
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://username:password@localhost/SpeedTrackRacing'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
 
+server = 'mednat.ieeta.pt,8101'
+username = 'p6g9'
+password = '!Gbej5kgTr!'
+driver = '{ODBC Driver 17 for SQL Server}'
+database = 'p6g9'
 
-### Models ###
-class Person(db.Model):
-    __tablename__ = 'person'
-    nif = db.Column(db.String(20), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    birth_date = db.Column(db.Date, nullable=False)
-    nationality = db.Column(db.String(50), nullable=False)
+conn_str = f"""
+    DRIVER={driver};
+    SERVER={server};
+    DATABASE={database};   
+    UID={username};
+    PWD={password};
+    TrustServerCertificate=yes;
+"""
 
-    driver = db.relationship('Driver', backref='person', uselist=False)
-    sponsor = db.relationship('Sponsor', backref='person', uselist=False)
-    mechanic = db.relationship('Mechanic', backref='person', uselist=False)
+def get_db_connection():
+    return pyodbc.connect(conn_str, autocommit=True)
 
-class Team(db.Model):
-    __tablename__ = 'Team'
-    team_id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    budget = db.Column(db.Numeric(15,2), nullable=False)
+def parse_date(date_str):
+    if date_str:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    return None
 
-    drivers = db.relationship('Driver', backref='team')
-    sponsors = db.relationship('Sponsor', backref='team')
-    mechanics = db.relationship('Mechanic', backref='team')
-    cars = db.relationship('Car', backref='team')
-    sponsorship = db.relationship('Sponsorship', backref='team')
-
-class Driver(db.Model):
-    __tablename__ = 'Driver'
-    driver_id = db.Column(db.Integer, primary_key=True)
-    total_points = db.Column(db.Integer, nullable=False, default=0)
-    wins = db.Column(db.Integer, nullable=False, default=0)
-    pole_positions = db.Column(db.Integer, nullable=False, default=0)
-
-    nif = db.Column(db.String(20), db.ForeignKey('Person.nif'), nullable=False)
-    team_id = db.Column(db.Integer, db.ForeignKey('Team.team_id'), nullable=False)
-
-    participation = db.relationship('Participation', backref='driver')
-    cars = db.relationship('Car', backref='driver')
-    belongs = db.relationship('Belongs', backref='driver')
-
-class Sponsor(db.Model):
-    __tablename__ = 'Sponsor'
-    sponsor_id = db.Column(db.Integer, primary_key=True)
-    contract_value = db.Column(db.Numeric(15,2), nullable=False)
-    sector = db.Column(db.String(50), nullable=False)
-
-    nif = db.Column(db.String(20), db.ForeignKey('Person.nif'), nullable=False)
-    team_id = db.Column(db.Integer, db.ForeignKey('Team.team_id'), nullable=False)
-
-    sponsorship = db.relationship('Sponsorship', backref='sponsor')
-
-
-class Mechanic(db.Model):
-    __tablename__ = 'Mechanic'
-    mechanic_id = db.Column(db.Integer, primary_key=True)
-    speciality = db.Column(db.String(50), nullable=False)
-    experience = db.Column(db.Integer, nullable=False)
-
-    nif = db.Column(db.String(20), db.ForeignKey('Person.nif'), nullable=False)
-    team_id = db.Column(db.Integer, db.ForeignKey('Team.team_id'), nullable=False)
-
-    works_on = db.relationship('Works_On', backref='mechanic')
-
-
-class Car(db.Model):
-    __tablename__ = 'Car'
-    car_id = db.Column(db.Integer, primary_key=True)
-    number = db.Column(db.Integer, nullable=False)
-    chassis_model = db.Column(db.String(50), nullable=False)
-    engine_type = db.Column(db.String(50), nullable=False)
-    weight = db.Column(db.Numeric(10,2), nullable=False)
-    manufacture_date = db.Column(db.Date, nullable=False)
-
-    team_id = db.Column(db.Integer, db.ForeignKey('Team.team_id'), nullable=False)
-    driver_id = db.Column(db.Integer, db.ForeignKey('Driver.driver_id'), nullable=False)
-
-    participation = db.relationship('Participation', backref='car')
-    works_on = db.relationship('Works_On', backref='car')
-    belongs = db.relationship('Belongs', backref='car')
-
-class Race(db.Model):
-    __tablename__ = 'Race'
-    race_id = db.Column(db.Integer, primary_key=True)
-    circuit = db.Column(db.String(100), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    track = db.Column(db.String(100), nullable=False)
-    weather_conditions = db.Column(db.String(50), nullable=False)
-
-    participation = db.relationship('Participation', backref='race')
-
-### Relationships ###
-class Participation(db.Model):
-    __tablename__ = 'Participation'
-    final_position = db.Column(db.Integer)
-    points_earned = db.Column(db.Integer)
-
-    driver_id = db.Column(db.Integer, db.ForeignKey('Driver.driver_id'), primary_key=True)
-    car_id = db.Column(db.Integer, db.ForeignKey('Car.car_id'), primary_key=True)
-    race_id = db.Column(db.Integer, db.ForeignKey('Race.race_id'), primary_key=True)
-
-class Works_On(db.Model):
-    __tablename__ = 'Works_On'
-    start_date = db.Column(db.Date, nullable=False)
-    end_date = db.Column(db.Date, nullable=False)
-
-    mechanic_id = db.Column(db.Integer, db.ForeignKey('Mechanic.mechanic_id'), primary_key=True)
-    car_id = db.Column(db.Integer, db.ForeignKey('Car.car_id'), primary_key=True)
-
-
-class Sponsorship(db.Model):
-    __tablename__ = 'Sponsorship'
-    start_date = db.Column(db.Date, nullable=False)
-    end_date = db.Column(db.Date, nullable=False)
-
-    sponsor_id = db.Column(db.Integer, db.ForeignKey('Sponsor.sponsor_id'), primary_key=True)
-    team_id = db.Column(db.Integer, db.ForeignKey('Team.team_id'), primary_key=True)
-
-
-class Belongs(db.Model):
-    __tablename__ = 'Belongs'
-    start_date = db.Column(db.Date, nullable=False)
-    end_date = db.Column(db.Date, nullable=False)
-
-    car_id = db.Column(db.Integer, db.ForeignKey('Car.car_id'), primary_key=True)
-    driver_id = db.Column(db.Integer, db.ForeignKey('Driver.driver_id'), primary_key=True)
-    team_id = db.Column(db.Integer, db.ForeignKey('Team.team_id'), primary_key=True)
-
+### Helper functions for database operations ###
+def execute_query(query, params=None, fetch=True):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+        
+        if fetch:
+            columns = [column[0] for column in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return results
+        else:
+            conn.commit()
+            return cursor.rowcount
+    finally:
+        cursor.close()
+        conn.close()
 
 ### Endpoints ###
 ## Models ##
 # Person
 @app.route('/api/persons', methods=['GET'])
 def get_persons():
-    persons = Person.query.all()
-    return jsonify([{
-        'nif': p.nif,
-        'name': p.name,
-        'birth_date': p.birth_date.isoformat(),
-        'nationality': p.nationality
-    } for p in persons])
-        
+    query = "SELECT * FROM Person"
+    persons = execute_query(query)
+    for p in persons:
+        p['birth_date'] = p['birth_date'].isoformat() if p['birth_date'] else None
+    return jsonify(persons)
 
-
-@app.route('api/persons/<string:nif>', methods=['GET'])
+@app.route('/api/persons/<string:nif>', methods=['GET'])
 def get_person(nif):
-    person = Person.query.get_or_404(nif)
-    return jsonify({
-        'nif': person.nif,
-        'name': person.name,
-        'birth_date': person.birth_date.isoformat(),
-        'nationality': person.nationality
-    })
+    query = "SELECT * FROM Person WHERE nif = ?"
+    person = execute_query(query, (nif,))
+    if not person:
+        return jsonify({'error': 'Person not found'}), 404
+    person[0]['birth_date'] = person[0]['birth_date'].isoformat() if person[0]['birth_date'] else None
+    return jsonify(person[0])
 
 # Team
 @app.route('/api/teams', methods=['GET'])
 def get_teams():
-    teams = Team.query.all()
-    return jsonify([{
-        'team_id': t.team_id,
-        'name': t.name,
-        'budget': float(t.budget),
-        'driver_count': len(t.drivers),
-        'sponsor_count': len(t.sponsors)
-    } for t in teams])
+    query = """
+    SELECT t.*, 
+           (SELECT COUNT(*) FROM Driver d WHERE d.team_id = t.team_id) as driver_count,
+           (SELECT COUNT(*) FROM Sponsor s WHERE s.team_id = t.team_id) as sponsor_count
+    FROM Team t
+    """
+    teams = execute_query(query)
+    for t in teams:
+        t['budget'] = float(t['budget']) if t['budget'] is not None else 0.0
+    return jsonify(teams)
 
 @app.route('/api/teams/<int:team_id>', methods=['GET'])
 def get_team(team_id):
-    team = Team.query.get_or_404(team_id)
-    return jsonify({
-        'team_id': team.team_id,
-        'name': team.name,
-        'budget': float(team.budget),
-        'drivers': [{
-            'driver_id': d.driver_id,
-            'name': d.person.name
-        } for d in team.drivers],
-        'sponsors': [{
-            'sponsor_id': s.sponsor_id,
-            'name': s.person.name,
-            'contract_value': float(s.contract_value)
-        } for s in team.sponsors]
-    })
+    # Get team info
+    team_query = "SELECT * FROM Team WHERE team_id = ?"
+    team = execute_query(team_query, (team_id,))
+    if not team:
+        return jsonify({'error': 'Team not found'}), 404
+    
+    # Get drivers
+    drivers_query = """
+    SELECT d.driver_id, p.name 
+    FROM Driver d
+    JOIN Person p ON d.nif = p.nif
+    WHERE d.team_id = ?
+    """
+    drivers = execute_query(drivers_query, (team_id,))
+    
+    # Get sponsors
+    sponsors_query = """
+    SELECT s.sponsor_id, p.name, s.contract_value
+    FROM Sponsor s
+    JOIN Person p ON s.nif = p.nif
+    WHERE s.team_id = ?
+    """
+    sponsors = execute_query(sponsors_query, (team_id,))
+    for s in sponsors:
+        s['contract_value'] = float(s['contract_value']) if s['contract_value'] is not None else 0.0
+    
+    team[0]['drivers'] = drivers
+    team[0]['sponsors'] = sponsors
+    team[0]['budget'] = float(team[0]['budget']) if team[0]['budget'] is not None else 0.0
+    
+    return jsonify(team[0])
 
 # Driver
 @app.route('/api/drivers', methods=['GET'])
 def get_drivers():
-    drivers = Driver.query.all()
-    return jsonify([{
-        'driver_id': d.driver_id,
-        'name': d.person.name,
-        'team': d.team.name,
-        'total_points': d.total_points,
-        'wins': d.wins,
-        'pole_positions': d.pole_positions
-    } for d in drivers])
+    query = """
+    SELECT d.driver_id, p.name, t.name as team, 
+           d.total_points, d.wins, d.pole_positions
+    FROM Driver d
+    JOIN Person p ON d.nif = p.nif
+    JOIN Team t ON d.team_id = t.team_id
+    """
+    drivers = execute_query(query)
+    return jsonify(drivers)
 
 @app.route('/api/drivers/<int:driver_id>', methods=['GET'])
 def get_driver(driver_id):
-    driver = Driver.query.get_or_404(driver_id)
-    return jsonify({
-        'driver_id': driver.driver_id,
-        'name': driver.person.name,
-        'birth_date': driver.person.birth_date.isoformat(),
-        'nationality': driver.person.nationality,
+    # Get driver info
+    driver_query = """
+    SELECT d.*, p.name, p.birth_date, p.nationality, t.name as team_name, t.team_id
+    FROM Driver d
+    JOIN Person p ON d.nif = p.nif
+    JOIN Team t ON d.team_id = t.team_id
+    WHERE d.driver_id = ?
+    """
+    driver = execute_query(driver_query, (driver_id,))
+    if not driver:
+        return jsonify({'error': 'Driver not found'}), 404
+    
+    # Get car info
+    car_query = """
+    SELECT car_id, number 
+    FROM Car 
+    WHERE driver_id = ?
+    """
+    cars = execute_query(car_query, (driver_id,))
+    
+    response = {
+        'driver_id': driver[0]['driver_id'],
+        'name': driver[0]['name'],
+        'birth_date': driver[0]['birth_date'].isoformat() if driver[0]['birth_date'] else None,
+        'nationality': driver[0]['nationality'],
         'team': {
-            'team_id': driver.team.team_id,
-            'name': driver.team.name
+            'team_id': driver[0]['team_id'],
+            'name': driver[0]['team_name']
         },
         'stats': {
-            'total_points': driver.total_points,
-            'wins': driver.wins,
-            'pole_positions': driver.pole_positions
+            'total_points': driver[0]['total_points'],
+            'wins': driver[0]['wins'],
+            'pole_positions': driver[0]['pole_positions']
         },
-        'car': {
-            'car_id': driver.cars[0].car_id if driver.cars else None,
-            'number': driver.cars[0].number if driver.cars else None
-        }
-    })
+        'car': cars[0] if cars else None
+    }
+    
+    return jsonify(response)
 
 # Car
 @app.route('/api/cars', methods=['GET'])
 def get_cars():
-    cars = Car.query.all()
-    return jsonify([{
-        'car_id': c.car_id,
-        'number': c.number,
-        'team': c.team.name,
-        'driver': c.driver.person.name if c.driver else None,
-        'chassis_model': c.chassis_model,
-        'engine_type': c.engine_type
-    } for c in cars])
+    query = """
+    SELECT c.car_id, c.number, t.name as team, p.name as driver, 
+           c.chassis_model, c.engine_type
+    FROM Car c
+    LEFT JOIN Team t ON c.team_id = t.team_id
+    LEFT JOIN Driver d ON c.driver_id = d.driver_id
+    LEFT JOIN Person p ON d.nif = p.nif
+    """
+    cars = execute_query(query)
+    return jsonify(cars)
 
 @app.route('/api/cars/<int:car_id>', methods=['GET'])
 def get_car(car_id):
-    car = Car.query.get_or_404(car_id)
-    return jsonify({
-        'car_id': car.car_id,
-        'number': car.number,
-        'chassis_model': car.chassis_model,
-        'engine_type': car.engine_type,
-        'weight': float(car.weight),
-        'manufacture_date': car.manufacture_date.isoformat(),
+    # Get car info
+    car_query = """
+    SELECT c.*, t.name as team_name, t.team_id, 
+           d.driver_id, p.name as driver_name
+    FROM Car c
+    LEFT JOIN Team t ON c.team_id = t.team_id
+    LEFT JOIN Driver d ON c.driver_id = d.driver_id
+    LEFT JOIN Person p ON d.nif = p.nif
+    WHERE c.car_id = ?
+    """
+    car = execute_query(car_query, (car_id,))
+    if not car:
+        return jsonify({'error': 'Car not found'}), 404
+    
+    # Get mechanics
+    mechanics_query = """
+    SELECT m.mechanic_id, p.name, m.specialty
+    FROM Works_On w
+    JOIN Mechanic m ON w.mechanic_id = m.mechanic_id
+    JOIN Person p ON m.nif = p.nif
+    WHERE w.car_id = ?
+    """
+    mechanics = execute_query(mechanics_query, (car_id,))
+    
+    response = {
+        'car_id': car[0]['car_id'],
+        'number': car[0]['number'],
+        'chassis_model': car[0]['chassis_model'],
+        'engine_type': car[0]['engine_type'],
+        'weight': float(car[0]['weight']) if car[0]['weight'] is not None else 0.0,
+        'manufacture_date': car[0]['manufacture_date'].isoformat() if car[0]['manufacture_date'] else None,
         'team': {
-            'team_id': car.team.team_id,
-            'name': car.team.name
+            'team_id': car[0]['team_id'],
+            'name': car[0]['team_name']
         },
         'driver': {
-            'driver_id': car.driver.driver_id,
-            'name': car.driver.person.name
-        } if car.driver else None,
-        'mechanics': [{
-            'mechanic_id': w.mechanic.mechanic_id,
-            'name': w.mechanic.person.name,
-            'specialty': w.mechanic.specialty
-        } for w in car.works_on]
-    })
+            'driver_id': car[0]['driver_id'],
+            'name': car[0]['driver_name']
+        } if car[0]['driver_id'] else None,
+        'mechanics': mechanics
+    }
+    
+    return jsonify(response)
 
 # Race
 @app.route('/api/races', methods=['GET'])
 def get_races():
-    races = Race.query.all()
-    return jsonify([{
-        'race_id': r.race_id,
-        'circuit': r.circuit,
-        'date': r.date.isoformat(),
-        'track': r.track,
-        'weather': r.weather_conditions,
-        'participation_count': len(r.participations)
-    } for r in races])
+    query = """
+    SELECT r.*, 
+           (SELECT COUNT(*) FROM Participation p WHERE p.race_id = r.race_id) as participation_count
+    FROM Race r
+    """
+    races = execute_query(query)
+    for r in races:
+        r['date'] = r['date'].isoformat() if r['date'] else None
+    return jsonify(races)
 
 @app.route('/api/races/<int:race_id>', methods=['GET'])
 def get_race(race_id):
-    race = Race.query.get_or_404(race_id)
-    return jsonify({
-        'race_id': race.race_id,
-        'circuit': race.circuit,
-        'date': race.date.isoformat(),
-        'track': race.track,
-        'weather_conditions': race.weather_conditions,
-        'results': sorted([{
-            'position': p.final_position,
-            'driver': p.driver.person.name,
-            'team': p.driver.team.name,
-            'car_number': p.car.number,
-            'points': p.points_earned
-        } for p in race.participations], key=lambda x: x['position'] if x['position'] else 999)
-    })
+    # Get race info
+    race_query = "SELECT * FROM Race WHERE race_id = ?"
+    race = execute_query(race_query, (race_id,))
+    if not race:
+        return jsonify({'error': 'Race not found'}), 404
+    
+    # Get participations
+    participations_query = """
+    SELECT p.final_position, p.points_earned, 
+           d.driver_id, per.name as driver_name, 
+           t.name as team_name, c.number as car_number
+    FROM Participation p
+    JOIN Driver d ON p.driver_id = d.driver_id
+    JOIN Person per ON d.nif = per.nif
+    JOIN Team t ON d.team_id = t.team_id
+    JOIN Car c ON p.car_id = c.car_id
+    WHERE p.race_id = ?
+    ORDER BY p.final_position
+    """
+    participations = execute_query(participations_query, (race_id,))
+    
+    race[0]['date'] = race[0]['date'].isoformat() if race[0]['date'] else None
+    race[0]['results'] = participations
+    
+    return jsonify(race[0])
 
 ## Relationships
 @app.route('/api/participations', methods=['POST'])
 def create_participation():
     data = request.get_json()
-    participation = Participation(
-        driver_id=data['driver_id'],
-        car_id=data['car_id'],
-        race_id=data['race_id'],
-        final_position=data.get('final_position'),
-        points_earned=data.get('points_earned', 0)
+    query = """
+    INSERT INTO Participation (driver_id, car_id, race_id, final_position, points_earned)
+    VALUES (?, ?, ?, ?, ?)
+    """
+    params = (
+        data['driver_id'],
+        data['car_id'],
+        data['race_id'],
+        data.get('final_position'),
+        data.get('points_earned', 0)
     )
-    db.session.add(participation)
-    db.session.commit()
-    return jsonify({'message': 'Participation created successfully'}), 201
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Participation created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/api/works_on', methods=['POST'])
 def create_works_on():
     data = request.get_json()
-    works_on = Works_On(
-        mechanic_id=data['mechanic_id'],
-        car_id=data['car_id'],
-        idate=parse_date(data['idate']),
-        edate=parse_date(data['edate'])
+    query = """
+    INSERT INTO Works_On (mechanic_id, car_id, idate, edate)
+    VALUES (?, ?, ?, ?)
+    """
+    params = (
+        data['mechanic_id'],
+        data['car_id'],
+        parse_date(data['idate']),
+        parse_date(data['edate'])
     )
-    db.session.add(works_on)
-    db.session.commit()
-    return jsonify({'message': 'Works_On relationship created successfully'}), 201
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Works_On relationship created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/api/sponsorships', methods=['POST'])
 def create_sponsorship():
     data = request.get_json()
-    sponsorship = Sponsorship(
-        sponsor_id=data['sponsor_id'],
-        team_id=data['team_id'],
-        start_date=parse_date(data['start_date']),
-        end_date=parse_date(data['end_date'])
+    query = """
+    INSERT INTO Sponsorship (sponsor_id, team_id, start_date, end_date)
+    VALUES (?, ?, ?, ?)
+    """
+    params = (
+        data['sponsor_id'],
+        data['team_id'],
+        parse_date(data['start_date']),
+        parse_date(data['end_date'])
     )
-    db.session.add(sponsorship)
-    db.session.commit()
-    return jsonify({'message': 'Sponsorship created successfully'}), 201
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Sponsorship created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/api/belongs', methods=['POST'])
 def create_belongs():
     data = request.get_json()
-    belongs = Belongs(
-        car_id=data['car_id'],
-        driver_id=data['driver_id'],
-        team_id=data['team_id'],
-        start_date=parse_date(data['start_date']),
-        end_date=parse_date(data['end_date'])
+    query = """
+    INSERT INTO Belongs (car_id, driver_id, team_id, start_date, end_date)
+    VALUES (?, ?, ?, ?, ?)
+    """
+    params = (
+        data['car_id'],
+        data['driver_id'],
+        data['team_id'],
+        parse_date(data['start_date']),
+        parse_date(data['end_date'])
     )
-    db.session.add(belongs)
-    db.session.commit()
-    return jsonify({'message': 'Belongs relationship created successfully'}), 201
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Belongs relationship created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
