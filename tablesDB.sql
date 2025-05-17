@@ -1,20 +1,31 @@
 USE p6g9;
 
+IF OBJECT_ID('Belongs', 'U') IS NOT NULL DROP TABLE Belongs;
+IF OBJECT_ID('Sponsorship', 'U') IS NOT NULL DROP TABLE Sponsorship;
+IF OBJECT_ID('Works_On', 'U') IS NOT NULL DROP TABLE Works_On;
+IF OBJECT_ID('Participation', 'U') IS NOT NULL DROP TABLE Participation;
+IF OBJECT_ID('Race', 'U') IS NOT NULL DROP TABLE Race;
+IF OBJECT_ID('Car', 'U') IS NOT NULL DROP TABLE Car;
+IF OBJECT_ID('Mechanic', 'U') IS NOT NULL DROP TABLE Mechanic;
+IF OBJECT_ID('Sponsor', 'U') IS NOT NULL DROP TABLE Sponsor;
+IF OBJECT_ID('Driver', 'U') IS NOT NULL DROP TABLE Driver;
+IF OBJECT_ID('Team', 'U') IS NOT NULL DROP TABLE Team;
+IF OBJECT_ID('Person', 'U') IS NOT NULL DROP TABLE Person;
 
-CREATE TABLE IF NOT EXISTS Person (
+CREATE TABLE Person (
     nif VARCHAR(20) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     birth_date DATE NOT NULL,
     nationality VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS Team (
+CREATE TABLE Team (
     team_id INT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     budget DECIMAL(15,2) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS Driver (
+CREATE TABLE Driver (
     driver_id INT PRIMARY KEY,
     total_points INT DEFAULT 0,
     wins INT DEFAULT 0,
@@ -26,7 +37,7 @@ CREATE TABLE IF NOT EXISTS Driver (
     FOREIGN KEY (team_id) REFERENCES Team(team_id)
 );
 
-CREATE TABLE IF NOT EXISTS Sponsor (
+CREATE TABLE Sponsor (
     sponsor_id INT PRIMARY KEY,
     contract_value DECIMAL(15,2) NOT NULL,
     sector VARCHAR(50) NOT NULL,
@@ -37,7 +48,7 @@ CREATE TABLE IF NOT EXISTS Sponsor (
     FOREIGN KEY (team_id) REFERENCES Team(team_id)
 );
 
-CREATE TABLE IF NOT EXISTS Mechanic (
+CREATE TABLE Mechanic (
     mechanic_id INT PRIMARY KEY,
     specialty VARCHAR(50) NOT NULL,
     experience INT NOT NULL,
@@ -48,7 +59,7 @@ CREATE TABLE IF NOT EXISTS Mechanic (
     FOREIGN KEY (team_id) REFERENCES Team(team_id)
 );
 
-CREATE TABLE IF NOT EXISTS Car (
+CREATE TABLE Car (
     car_id INT PRIMARY KEY,
     number INT NOT NULL,
     chassis_model VARCHAR(50) NOT NULL,
@@ -62,7 +73,7 @@ CREATE TABLE IF NOT EXISTS Car (
     FOREIGN KEY (driver_id) REFERENCES Driver(driver_id)
 );
 
-CREATE TABLE IF NOT EXISTS Race (
+CREATE TABLE Race (
     race_id INT PRIMARY KEY,
     circuit VARCHAR(100) NOT NULL,
     date DATE NOT NULL,
@@ -70,7 +81,7 @@ CREATE TABLE IF NOT EXISTS Race (
     weather_conditions VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS Participation (
+CREATE TABLE Participation (
     final_position INT,
     points_earned INT,  
 
@@ -85,7 +96,7 @@ CREATE TABLE IF NOT EXISTS Participation (
     FOREIGN KEY (race_id) REFERENCES Race(race_id)
 );
 
-CREATE TABLE IF NOT EXISTS Works_On (
+CREATE TABLE Works_On (
     idate DATE NOT NULL,
     edate DATE NOT NULL,  
 
@@ -98,7 +109,7 @@ CREATE TABLE IF NOT EXISTS Works_On (
     FOREIGN KEY (car_id) REFERENCES Car(car_id)
 );
 
-CREATE TABLE IF NOT EXISTS Sponsorship (
+CREATE TABLE Sponsorship (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
 
@@ -111,7 +122,7 @@ CREATE TABLE IF NOT EXISTS Sponsorship (
     FOREIGN KEY (team_id) REFERENCES Team(team_id)
 );
 
-CREATE TABLE IF NOT EXISTS Belongs (
+CREATE TABLE Belongs (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
 

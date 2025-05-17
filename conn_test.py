@@ -15,11 +15,11 @@ conn_str = f"""
     TrustServerCertificate=yes;
 """
 
-try:
-    with pyodbc.connect(conn_str, autocommit=True) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
-        print("✅ Connection successful and query ran!")
-except Exception as e:
-    print("❌ Connection failed:", e)
+conn = pyodbc.connect(conn_str)
+cursor = conn.cursor()
+cursor.execute("SELECT name FROM sys.tables")
+tables = cursor.fetchall()
+print("Tables in database:", tables)
+cursor.close()
+conn.close()
 
