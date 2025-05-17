@@ -133,6 +133,6 @@ CREATE TABLE Belongs (
     PRIMARY KEY (driver_id, car_id, team_id),
 
     FOREIGN KEY (driver_id) REFERENCES Driver(driver_id),
-    FOREIGN KEY (team_id) REFERENCES Team(team_id)
+    FOREIGN KEY (team_id) REFERENCES Team(team_id),
     FOREIGN KEY (car_id) REFERENCES Car(car_id)
 )

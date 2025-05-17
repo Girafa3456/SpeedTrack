@@ -29,7 +29,6 @@ def parse_date(date_str):
         return datetime.strptime(date_str, '%Y-%m-%d').date()
     return None
 
-### Helper functions for database operations ###
 def execute_query(query, params=None, fetch=True):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -86,13 +85,12 @@ def get_teams():
 
 @app.route('/api/teams/<int:team_id>', methods=['GET'])
 def get_team(team_id):
-    # Get team info
     team_query = "SELECT * FROM Team WHERE team_id = ?"
     team = execute_query(team_query, (team_id,))
     if not team:
         return jsonify({'error': 'Team not found'}), 404
     
-    # Get drivers
+
     drivers_query = """
     SELECT d.driver_id, p.name 
     FROM Driver d
@@ -100,8 +98,7 @@ def get_team(team_id):
     WHERE d.team_id = ?
     """
     drivers = execute_query(drivers_query, (team_id,))
-    
-    # Get sponsors
+
     sponsors_query = """
     SELECT s.sponsor_id, p.name, s.contract_value
     FROM Sponsor s
@@ -133,7 +130,6 @@ def get_drivers():
 
 @app.route('/api/drivers/<int:driver_id>', methods=['GET'])
 def get_driver(driver_id):
-    # Get driver info
     driver_query = """
     SELECT d.*, p.name, p.birth_date, p.nationality, t.name as team_name, t.team_id
     FROM Driver d
@@ -145,7 +141,6 @@ def get_driver(driver_id):
     if not driver:
         return jsonify({'error': 'Driver not found'}), 404
     
-    # Get car info
     car_query = """
     SELECT car_id, number 
     FROM Car 
@@ -188,7 +183,6 @@ def get_cars():
 
 @app.route('/api/cars/<int:car_id>', methods=['GET'])
 def get_car(car_id):
-    # Get car info
     car_query = """
     SELECT c.*, t.name as team_name, t.team_id, 
            d.driver_id, p.name as driver_name
@@ -202,7 +196,6 @@ def get_car(car_id):
     if not car:
         return jsonify({'error': 'Car not found'}), 404
     
-    # Get mechanics
     mechanics_query = """
     SELECT m.mechanic_id, p.name, m.specialty
     FROM Works_On w
@@ -247,13 +240,11 @@ def get_races():
 
 @app.route('/api/races/<int:race_id>', methods=['GET'])
 def get_race(race_id):
-    # Get race info
     race_query = "SELECT * FROM Race WHERE race_id = ?"
     race = execute_query(race_query, (race_id,))
     if not race:
         return jsonify({'error': 'Race not found'}), 404
     
-    # Get participations
     participations_query = """
     SELECT p.final_position, p.points_earned, 
            d.driver_id, per.name as driver_name, 
@@ -274,6 +265,28 @@ def get_race(race_id):
     return jsonify(race[0])
 
 ## Relationships
+# Participation
+@app.route('/api/participations', methods=['GET'])
+def get_participations():
+    query = """
+    SELECT p.*, 
+           d.driver_id, per.name as driver_name,
+           t.name as team_name,
+           c.number as car_number,
+           r.circuit as race_circuit, r.date as race_date
+    FROM Participation p
+    JOIN Driver d ON p.driver_id = d.driver_id
+    JOIN Person per ON d.nif = per.nif
+    JOIN Team t ON d.team_id = t.team_id
+    JOIN Car c ON p.car_id = c.car_id
+    JOIN Race r ON p.race_id = r.race_id
+    """
+    participations = execute_query(query)
+    for p in participations:
+        if 'race_date' in p:
+            p['race_date'] = p['race_date'].isoformat() if p['race_date'] else None
+    return jsonify(participations)
+
 @app.route('/api/participations', methods=['POST'])
 def create_participation():
     data = request.get_json()
@@ -294,6 +307,25 @@ def create_participation():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+# Works_On
+@app.route('/api/works_on', methods=['GET'])
+def get_works_on():
+    query = """
+    SELECT w.*, 
+           m.mechanic_id, p.name as mechanic_name, m.specialty,
+           c.number as car_number, t.name as team_name
+    FROM Works_On w
+    JOIN Mechanic m ON w.mechanic_id = m.mechanic_id
+    JOIN Person p ON m.nif = p.nif
+    JOIN Car c ON w.car_id = c.car_id
+    JOIN Team t ON c.team_id = t.team_id
+    """
+    works_on = execute_query(query)
+    for w in works_on:
+        w['idate'] = w['idate'].isoformat() if w['idate'] else None
+        w['edate'] = w['edate'].isoformat() if w['edate'] else None
+    return jsonify(works_on)
+
 @app.route('/api/works_on', methods=['POST'])
 def create_works_on():
     data = request.get_json()
@@ -313,6 +345,24 @@ def create_works_on():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+# Sponsorship
+@app.route('/api/sponsorships', methods=['GET'])
+def get_sponsorships():
+    query = """
+    SELECT s.*, 
+           sp.name as sponsor_name, sp_ent.sector,
+           t.name as team_name
+    FROM Sponsorship s
+    JOIN Sponsor sp_ent ON s.sponsor_id = sp_ent.sponsor_id
+    JOIN Person sp ON sp_ent.nif = sp.nif
+    JOIN Team t ON s.team_id = t.team_id
+    """
+    sponsorships = execute_query(query)
+    for s in sponsorships:
+        s['start_date'] = s['start_date'].isoformat() if s['start_date'] else None
+        s['end_date'] = s['end_date'].isoformat() if s['end_date'] else None
+    return jsonify(sponsorships)
+
 @app.route('/api/sponsorships', methods=['POST'])
 def create_sponsorship():
     data = request.get_json()
@@ -331,6 +381,26 @@ def create_sponsorship():
         return jsonify({'message': 'Sponsorship created successfully'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+# Belongs
+@app.route('/api/belongs', methods=['GET'])
+def get_belongs():
+    query = """
+    SELECT b.*, 
+           d.driver_id, p.name as driver_name,
+           t.name as team_name,
+           c.number as car_number
+    FROM Belongs b
+    JOIN Driver d ON b.driver_id = d.driver_id
+    JOIN Person p ON d.nif = p.nif
+    JOIN Team t ON b.team_id = t.team_id
+    JOIN Car c ON b.car_id = c.car_id
+    """
+    belongs = execute_query(query)
+    for b in belongs:
+        b['start_date'] = b['start_date'].isoformat() if b['start_date'] else None
+        b['end_date'] = b['end_date'].isoformat() if b['end_date'] else None
+    return jsonify(belongs)
 
 @app.route('/api/belongs', methods=['POST'])
 def create_belongs():
