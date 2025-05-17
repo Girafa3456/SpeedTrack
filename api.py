@@ -72,7 +72,7 @@ def create_person():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     
-# UPDATE
+# PUT
 @app.route('/api/persons/<string:nif>', methods=['PUT'])
 def update_person(nif):
     data = request.get_json()
@@ -149,7 +149,7 @@ def create_driver():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     
-# UPDATE
+# PUT
 @app.route('/api/drivers/<int:driver_id>', methods=['PUT'])
 def update_driver(driver_id):
     data = request.get_json()
@@ -258,7 +258,7 @@ def create_sponsor():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-# UPDATE
+# PUT
 @app.route('/api/sponsors/<int:sponsor_id>', methods=['PUT'])
 def update_sponsor(sponsor_id):
     data = request.get_json()
@@ -372,7 +372,7 @@ def create_mechanic():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     
-# UPDATE
+# PUT
 @app.route('/api/mechanics/<int:mechanic_id>', methods=['PUT'])
 def update_mechanic(mechanic_id):
     data = request.get_json()
@@ -485,7 +485,7 @@ def create_team():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     
-# UPDATE
+# PUT
 @app.route('/api/teams/<int:team_id>', methods=['PUT'])
 def update_team(team_id):
     data = request.get_json()
@@ -590,7 +590,7 @@ def create_car():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     
-# UPDATE
+# PUT
 @app.route('/api/cars/<int:car_id>', methods=['PUT'])
 def update_car(car_id):
     data = request.get_json()
@@ -711,7 +711,7 @@ def create_race():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     
-# UPDATE
+# PUT
 @app.route('/api/races/<int:race_id>', methods=['PUT'])
 def update_race(race_id):
     data = request.get_json()
@@ -787,7 +787,73 @@ def get_race(race_id):
     return jsonify(race[0])
 
 ## Relationships
-# Participation
+# Participation #
+# POST
+@app.route('/api/participations', methods=['POST'])
+def create_participation():
+    data = request.get_json()
+    query = """
+    INSERT INTO Participation (driver_id, car_id, race_id, final_position, points_earned)
+    VALUES (?, ?, ?, ?, ?)
+    """
+    params = (
+        data['driver_id'],
+        data['car_id'],
+        data['race_id'],
+        data.get('final_position'),
+        data.get('points_earned', 0)
+    )
+    try:
+        execute_query(query, params, fetch=False)
+        return jsonify({'message': 'Participation created successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+# PUT
+@app.route('/api/participations', methods=['PUT'])
+def update_participation():
+    data = request.get_json()
+    query = """
+    UPDATE Participation 
+    SET final_position = ?, points_earned = ?
+    WHERE driver_id = ? AND car_id = ? AND race_id = ?
+    """
+    params = (
+        data.get('final_position'),
+        data.get('points_earned'),
+        data['driver_id'],
+        data['car_id'],
+        data['race_id']
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Participation not found'}), 404
+        return jsonify({'message': 'Participation updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# DELETE
+@app.route('/api/participations', methods=['DELETE'])
+def delete_participation():
+    data = request.get_json()
+    query = """
+    DELETE FROM Participation
+    WHERE driver_id = ? AND car_id = ? AND race_id = ?
+    """
+    params = (
+        data['driver_id'],
+        data['car_id'],
+        data['race_id']
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Participation not found'}), 404
+        return jsonify({'message': 'Participation deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
 @app.route('/api/participations', methods=['GET'])
 def get_participations():
     query = """
@@ -809,45 +875,9 @@ def get_participations():
             p['race_date'] = p['race_date'].isoformat() if p['race_date'] else None
     return jsonify(participations)
 
-@app.route('/api/participations', methods=['POST'])
-def create_participation():
-    data = request.get_json()
-    query = """
-    INSERT INTO Participation (driver_id, car_id, race_id, final_position, points_earned)
-    VALUES (?, ?, ?, ?, ?)
-    """
-    params = (
-        data['driver_id'],
-        data['car_id'],
-        data['race_id'],
-        data.get('final_position'),
-        data.get('points_earned', 0)
-    )
-    try:
-        execute_query(query, params, fetch=False)
-        return jsonify({'message': 'Participation created successfully'}), 201
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
 
-# Works_On
-@app.route('/api/works_on', methods=['GET'])
-def get_works_on():
-    query = """
-    SELECT w.*, 
-           m.mechanic_id, p.name as mechanic_name, m.specialty,
-           c.number as car_number, t.name as team_name
-    FROM Works_On w
-    JOIN Mechanic m ON w.mechanic_id = m.mechanic_id
-    JOIN Person p ON m.nif = p.nif
-    JOIN Car c ON w.car_id = c.car_id
-    JOIN Team t ON c.team_id = t.team_id
-    """
-    works_on = execute_query(query)
-    for w in works_on:
-        w['idate'] = w['idate'].isoformat() if w['idate'] else None
-        w['edate'] = w['edate'].isoformat() if w['edate'] else None
-    return jsonify(works_on)
-
+# Works_On #
+# POST
 @app.route('/api/works_on', methods=['POST'])
 def create_works_on():
     data = request.get_json()
@@ -866,25 +896,71 @@ def create_works_on():
         return jsonify({'message': 'Works_On relationship created successfully'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-
-# Sponsorship
-@app.route('/api/sponsorships', methods=['GET'])
-def get_sponsorships():
+    
+# PUT
+@app.route('/api/works_on', methods=['PUT'])
+def update_works_on():
+    data = request.get_json()
     query = """
-    SELECT s.*, 
-           sp.name as sponsor_name, sp_ent.sector,
-           t.name as team_name
-    FROM Sponsorship s
-    JOIN Sponsor sp_ent ON s.sponsor_id = sp_ent.sponsor_id
-    JOIN Person sp ON sp_ent.nif = sp.nif
-    JOIN Team t ON s.team_id = t.team_id
+    UPDATE Works_On 
+    SET idate = ?, edate = ?
+    WHERE mechanic_id = ? AND car_id = ?
     """
-    sponsorships = execute_query(query)
-    for s in sponsorships:
-        s['start_date'] = s['start_date'].isoformat() if s['start_date'] else None
-        s['end_date'] = s['end_date'].isoformat() if s['end_date'] else None
-    return jsonify(sponsorships)
+    params = (
+        parse_date(data.get('idate')),
+        parse_date(data.get('edate')),
+        data['mechanic_id'],
+        data['car_id']
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Works_On relationship not found'}), 404
+        return jsonify({'message': 'Works_On relationship updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# DELETE
+@app.route('/api/works_on', methods=['DELETE'])
+def delete_works_on():
+    data = request.get_json()
+    query = """
+    DELETE FROM Works_On
+    WHERE mechanic_id = ? AND car_id = ?
+    """
+    params = (
+        data['mechanic_id'],
+        data['car_id']
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Works_On relationship not found'}), 404
+        return jsonify({'message': 'Works_On relationship deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
+@app.route('/api/works_on', methods=['GET'])
+def get_works_on():
+    query = """
+    SELECT w.*, 
+           m.mechanic_id, p.name as mechanic_name, m.specialty,
+           c.number as car_number, t.name as team_name
+    FROM Works_On w
+    JOIN Mechanic m ON w.mechanic_id = m.mechanic_id
+    JOIN Person p ON m.nif = p.nif
+    JOIN Car c ON w.car_id = c.car_id
+    JOIN Team t ON c.team_id = t.team_id
+    """
+    works_on = execute_query(query)
+    for w in works_on:
+        w['idate'] = w['idate'].isoformat() if w['idate'] else None
+        w['edate'] = w['edate'].isoformat() if w['edate'] else None
+    return jsonify(works_on)
 
+# Sponsorship #
+# POST
 @app.route('/api/sponsorships', methods=['POST'])
 def create_sponsorship():
     data = request.get_json()
@@ -903,27 +979,70 @@ def create_sponsorship():
         return jsonify({'message': 'Sponsorship created successfully'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-
-# Belongs
-@app.route('/api/belongs', methods=['GET'])
-def get_belongs():
+    
+# PUT
+@app.route('/api/sponsorships', methods=['PUT'])
+def update_sponsorship():
+    data = request.get_json()
     query = """
-    SELECT b.*, 
-           d.driver_id, p.name as driver_name,
-           t.name as team_name,
-           c.number as car_number
-    FROM Belongs b
-    JOIN Driver d ON b.driver_id = d.driver_id
-    JOIN Person p ON d.nif = p.nif
-    JOIN Team t ON b.team_id = t.team_id
-    JOIN Car c ON b.car_id = c.car_id
+    UPDATE Sponsorship 
+    SET start_date = ?, end_date = ?
+    WHERE sponsor_id = ? AND team_id = ?
     """
-    belongs = execute_query(query)
-    for b in belongs:
-        b['start_date'] = b['start_date'].isoformat() if b['start_date'] else None
-        b['end_date'] = b['end_date'].isoformat() if b['end_date'] else None
-    return jsonify(belongs)
+    params = (
+        parse_date(data.get('start_date')),
+        parse_date(data.get('end_date')),
+        data['sponsor_id'],
+        data['team_id']
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Sponsorship not found'}), 404
+        return jsonify({'message': 'Sponsorship updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# DELETE
+@app.route('/api/sponsorships', methods=['DELETE'])
+def delete_sponsorship():
+    data = request.get_json()
+    query = """
+    DELETE FROM Sponsorship
+    WHERE sponsor_id = ? AND team_id = ?
+    """
+    params = (
+        data['sponsor_id'],
+        data['team_id']
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Sponsorship not found'}), 404
+        return jsonify({'message': 'Sponsorship deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
+@app.route('/api/sponsorships', methods=['GET'])
+def get_sponsorships():
+    query = """
+    SELECT s.*, 
+           sp.name as sponsor_name, sp_ent.sector,
+           t.name as team_name
+    FROM Sponsorship s
+    JOIN Sponsor sp_ent ON s.sponsor_id = sp_ent.sponsor_id
+    JOIN Person sp ON sp_ent.nif = sp.nif
+    JOIN Team t ON s.team_id = t.team_id
+    """
+    sponsorships = execute_query(query)
+    for s in sponsorships:
+        s['start_date'] = s['start_date'].isoformat() if s['start_date'] else None
+        s['end_date'] = s['end_date'].isoformat() if s['end_date'] else None
+    return jsonify(sponsorships)
 
+# Belongs #
+# POST
 @app.route('/api/belongs', methods=['POST'])
 def create_belongs():
     data = request.get_json()
@@ -943,6 +1062,71 @@ def create_belongs():
         return jsonify({'message': 'Belongs relationship created successfully'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+    
+# PUT
+@app.route('/api/belongs', methods=['PUT'])
+def update_belongs():
+    data = request.get_json()
+    query = """
+    UPDATE Belongs 
+    SET start_date = ?, end_date = ?
+    WHERE car_id = ? AND driver_id = ? AND team_id = ?
+    """
+    params = (
+        parse_date(data.get('start_date')),
+        parse_date(data.get('end_date')),
+        data['car_id'],
+        data['driver_id'],
+        data['team_id']
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Belongs relationship not found'}), 404
+        return jsonify({'message': 'Belongs relationship updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# DELETE
+@app.route('/api/belongs', methods=['DELETE'])
+def delete_belongs():
+    data = request.get_json()
+    query = """
+    DELETE FROM Belongs
+    WHERE car_id = ? AND driver_id = ? AND team_id = ?
+    """
+    params = (
+        data['car_id'],
+        data['driver_id'],
+        data['team_id']
+    )
+    try:
+        affected_rows = execute_query(query, params, fetch=False)
+        if affected_rows == 0:
+            return jsonify({'error': 'Belongs relationship not found'}), 404
+        return jsonify({'message': 'Belongs relationship deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+# GET
+@app.route('/api/belongs', methods=['GET'])
+def get_belongs():
+    query = """
+    SELECT b.*, 
+           d.driver_id, p.name as driver_name,
+           t.name as team_name,
+           c.number as car_number
+    FROM Belongs b
+    JOIN Driver d ON b.driver_id = d.driver_id
+    JOIN Person p ON d.nif = p.nif
+    JOIN Team t ON b.team_id = t.team_id
+    JOIN Car c ON b.car_id = c.car_id
+    """
+    belongs = execute_query(query)
+    for b in belongs:
+        b['start_date'] = b['start_date'].isoformat() if b['start_date'] else None
+        b['end_date'] = b['end_date'].isoformat() if b['end_date'] else None
+    return jsonify(belongs)
 
 if __name__ == '__main__':
     app.run(debug=True)
