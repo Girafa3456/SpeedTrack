@@ -22,8 +22,39 @@ export const getMechanics = async () => {
   return response.data;
 };
 
+// Teams
 export const getTeams = async () => {
   const response = await axios.get(`${API_BASE_URL}/teams`);
+  return response.data;
+};
+
+export const getTeam = async (teamId: number) => {
+  const response = await axios.get(`${API_BASE_URL}/teams/${teamId}`);
+  return response.data;
+};
+
+export const createTeam = async (teamData: {
+  team_id: number;
+  name: string;
+  budget: number;
+}) => {
+  const response = await axios.post(`${API_BASE_URL}/teams`, teamData);
+  return response.data;
+};
+
+export const updateTeam = async (
+  teamId: number,
+  teamData: {
+    name?: string;
+    budget?: number;
+  }
+) => {
+  const response = await axios.put(`${API_BASE_URL}/teams/${teamId}`, teamData);
+  return response.data;
+};
+
+export const deleteTeam = async (teamId: number) => {
+  const response = await axios.delete(`${API_BASE_URL}/teams/${teamId}`);
   return response.data;
 };
 
