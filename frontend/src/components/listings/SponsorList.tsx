@@ -3,8 +3,14 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { getSponsors } from '../../services/api.ts';
 import { Sponsor } from '../../interfaces/types';
 
+// Extended interface for sponsors with joined data
+interface SponsorWithDetails extends Sponsor {
+  person_name: string;
+  team_name: string;
+}
+
 const SponsorList: React.FC = () => {
-  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [sponsors, setSponsors] = useState<SponsorWithDetails[]>([]);
 
   useEffect(() => {
     const fetchSponsors = async () => {
@@ -35,7 +41,7 @@ const SponsorList: React.FC = () => {
           {sponsors.map((sponsor) => (
             <TableRow key={sponsor.sponsor_id}>
               <TableCell>{sponsor.sponsor_id}</TableCell>
-              <TableCell>{sponsor.name}</TableCell>
+              <TableCell>{sponsor.person_name}</TableCell>
               <TableCell>${sponsor.contract_value.toLocaleString()}</TableCell>
               <TableCell>{sponsor.sector}</TableCell>
               <TableCell>{sponsor.team_name}</TableCell>

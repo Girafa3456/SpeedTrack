@@ -3,8 +3,14 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { getMechanics } from '../../services/api.ts';
 import { Mechanic } from '../../interfaces/types';
 
+
+interface MechanicWithDetails extends Mechanic {
+  person_name: string;
+  team_name: string;
+}
+
 const MechanicList: React.FC = () => {
-  const [mechanics, setMechanics] = useState<Mechanic[]>([]);
+  const [mechanics, setMechanics] = useState<MechanicWithDetails[]>([]);
 
   useEffect(() => {
     const fetchMechanics = async () => {
@@ -35,7 +41,7 @@ const MechanicList: React.FC = () => {
           {mechanics.map((mechanic) => (
             <TableRow key={mechanic.mechanic_id}>
               <TableCell>{mechanic.mechanic_id}</TableCell>
-              <TableCell>{mechanic.name}</TableCell>
+              <TableCell>{mechanic.person_name}</TableCell>
               <TableCell>{mechanic.specialty}</TableCell>
               <TableCell>{mechanic.experience}</TableCell>
               <TableCell>{mechanic.team_name}</TableCell>

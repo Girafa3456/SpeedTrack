@@ -189,8 +189,15 @@ def delete_driver(driver_id):
 @app.route('/api/drivers', methods=['GET'])
 def get_drivers():
     query = """
-    SELECT d.driver_id, p.name, t.name as team, 
-           d.total_points, d.wins, d.pole_positions
+    SELECT 
+        d.driver_id,
+        d.total_points,
+        d.wins,
+        d.pole_positions,
+        d.nif,
+        d.team_id,
+        p.name as person_name,
+        t.name as team_name
     FROM Driver d
     JOIN Person p ON d.nif = p.nif
     JOIN Team t ON d.team_id = t.team_id
@@ -297,17 +304,30 @@ def delete_sponsor(sponsor_id):
 @app.route('/api/sponsors', methods=['GET'])
 def get_sponsors():
     query = """
-    SELECT s.sponsor_id, p.name, p.birth_date, p.nationality, 
-           s.contract_value, s.sector, t.name as team_name, t.team_id
+    SELECT 
+        s.sponsor_id,
+        s.contract_value,
+        s.sector,
+        s.team_id,
+        s.nif,
+        p.name as person_name,
+        t.name as team_name
     FROM Sponsor s
     JOIN Person p ON s.nif = p.nif
     JOIN Team t ON s.team_id = t.team_id
+    ORDER BY s.contract_value DESC
     """
     sponsors = execute_query(query)
-    for s in sponsors:
-        s['birth_date'] = s['birth_date'].isoformat() if s['birth_date'] else None
-        s['contract_value'] = float(s['contract_value']) if s['contract_value'] is not None else 0.0
-    return jsonify(sponsors)
+    
+    formatted_sponsors = []
+    for sponsor in sponsors:
+        formatted_sponsor = {
+            **sponsor,
+            'contract_value': float(sponsor['contract_value']) if sponsor['contract_value'] is not None else 0.0
+        }
+        formatted_sponsors.append(formatted_sponsor)
+    
+    return jsonify(formatted_sponsors)
 
 @app.route('/api/sponsors/<int:sponsor_id>', methods=['GET'])
 def get_sponsor(sponsor_id):
@@ -411,15 +431,19 @@ def delete_mechanic(mechanic_id):
 @app.route('/api/mechanics', methods=['GET'])
 def get_mechanics():
     query = """
-    SELECT m.mechanic_id, p.name, p.birth_date, p.nationality, 
-           m.specialty, m.experience, t.name as team_name, t.team_id
+    SELECT 
+        m.mechanic_id,
+        m.specialty,
+        m.experience,
+        m.nif,
+        m.team_id,
+        p.name as person_name,
+        t.name as team_name
     FROM Mechanic m
     JOIN Person p ON m.nif = p.nif
     JOIN Team t ON m.team_id = t.team_id
     """
     mechanics = execute_query(query)
-    for m in mechanics:
-        m['birth_date'] = m['birth_date'].isoformat() if m['birth_date'] else None
     return jsonify(mechanics)
 
 @app.route('/api/mechanics/<int:mechanic_id>', methods=['GET'])
@@ -635,15 +659,33 @@ def delete_car(car_id):
 @app.route('/api/cars', methods=['GET'])
 def get_cars():
     query = """
-    SELECT c.car_id, c.number, t.name as team, p.name as driver, 
-           c.chassis_model, c.engine_type
+    SELECT 
+        c.car_id, 
+        c.number, 
+        c.chassis_model, 
+        c.engine_type,
+        c.weight,
+        c.manufacture_date,
+        t.name as team_name, 
+        p.name as driver_name
     FROM Car c
     LEFT JOIN Team t ON c.team_id = t.team_id
     LEFT JOIN Driver d ON c.driver_id = d.driver_id
     LEFT JOIN Person p ON d.nif = p.nif
     """
     cars = execute_query(query)
-    return jsonify(cars)
+    
+    # Format the dates and handle null values
+    formatted_cars = []
+    for car in cars:
+        formatted_car = {
+            **car,
+            'weight': float(car['weight']) if car['weight'] is not None else 0.0,
+            'manufacture_date': car['manufacture_date'].isoformat() if car['manufacture_date'] else None
+        }
+        formatted_cars.append(formatted_car)
+    
+    return jsonify(formatted_cars)
 
 @app.route('/api/cars/<int:car_id>', methods=['GET'])
 def get_car(car_id):
@@ -751,14 +793,30 @@ def delete_race(race_id):
 @app.route('/api/races', methods=['GET'])
 def get_races():
     query = """
-    SELECT r.*, 
-           (SELECT COUNT(*) FROM Participation p WHERE p.race_id = r.race_id) as participation_count
+    SELECT 
+        r.race_id,
+        r.circuit,
+        r.date,
+        r.track,
+        r.weather_conditions,
+        COUNT(p.race_id) as participation_count
     FROM Race r
+    LEFT JOIN Participation p ON r.race_id = p.race_id
+    GROUP BY r.race_id, r.circuit, r.date, r.track, r.weather_conditions
+    ORDER BY r.date DESC
     """
     races = execute_query(query)
-    for r in races:
-        r['date'] = r['date'].isoformat() if r['date'] else None
-    return jsonify(races)
+    
+    formatted_races = []
+    for race in races:
+        formatted_race = {
+            **race,
+            'date': race['date'].isoformat() if race['date'] else None,
+            'participation_count': race['participation_count'] or 0
+        }
+        formatted_races.append(formatted_race)
+    
+    return jsonify(formatted_races)
 
 @app.route('/api/races/<int:race_id>', methods=['GET'])
 def get_race(race_id):
@@ -857,22 +915,24 @@ def delete_participation():
 @app.route('/api/participations', methods=['GET'])
 def get_participations():
     query = """
-    SELECT p.*, 
-           d.driver_id, per.name as driver_name,
-           t.name as team_name,
-           c.number as car_number,
-           r.circuit as race_circuit, r.date as race_date
+    SELECT 
+        p.driver_id,
+        p.car_id,
+        p.race_id,
+        p.final_position,
+        p.points_earned,
+        per.name as driver_name,
+        t.name as team_name,
+        c.number as car_number,
+        r.circuit as race_circuit
     FROM Participation p
     JOIN Driver d ON p.driver_id = d.driver_id
     JOIN Person per ON d.nif = per.nif
-    JOIN Team t ON d.team_id = t.team_id
     JOIN Car c ON p.car_id = c.car_id
+    JOIN Team t ON c.team_id = t.team_id
     JOIN Race r ON p.race_id = r.race_id
     """
     participations = execute_query(query)
-    for p in participations:
-        if 'race_date' in p:
-            p['race_date'] = p['race_date'].isoformat() if p['race_date'] else None
     return jsonify(participations)
 
 
@@ -1027,19 +1087,31 @@ def delete_sponsorship():
 @app.route('/api/sponsorships', methods=['GET'])
 def get_sponsorships():
     query = """
-    SELECT s.*, 
-           sp.name as sponsor_name, sp_ent.sector,
-           t.name as team_name
-    FROM Sponsorship s
-    JOIN Sponsor sp_ent ON s.sponsor_id = sp_ent.sponsor_id
-    JOIN Person sp ON sp_ent.nif = sp.nif
-    JOIN Team t ON s.team_id = t.team_id
+    SELECT 
+        sp.sponsor_id,
+        sp.team_id,
+        sp.start_date,
+        sp.end_date,
+        p.name as sponsor_name,
+        t.name as team_name
+    FROM Sponsorship sp
+    JOIN Sponsor s ON sp.sponsor_id = s.sponsor_id
+    JOIN Person p ON s.nif = p.nif
+    JOIN Team t ON sp.team_id = t.team_id
+    ORDER BY sp.start_date DESC
     """
     sponsorships = execute_query(query)
-    for s in sponsorships:
-        s['start_date'] = s['start_date'].isoformat() if s['start_date'] else None
-        s['end_date'] = s['end_date'].isoformat() if s['end_date'] else None
-    return jsonify(sponsorships)
+    
+    formatted_sponsorships = []
+    for sponsorship in sponsorships:
+        formatted_sponsorship = {
+            **sponsorship,
+            'start_date': sponsorship['start_date'].isoformat(),
+            'end_date': sponsorship['end_date'].isoformat() if sponsorship['end_date'] else None
+        }
+        formatted_sponsorships.append(formatted_sponsorship)
+    
+    return jsonify(formatted_sponsorships)
 
 # Belongs #
 # POST

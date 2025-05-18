@@ -3,8 +3,13 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { getTeams } from '../../services/api.ts';
 import { Team } from '../../interfaces/types';
 
+interface TeamWithDetails extends Team {
+  driver_count: number;
+  sponsor_count: number;
+}
+
 const TeamList: React.FC = () => {
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teams, setTeams] = useState<TeamWithDetails[]>([]);
 
   useEffect(() => {
     const fetchTeams = async () => {

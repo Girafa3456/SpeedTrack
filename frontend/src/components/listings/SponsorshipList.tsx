@@ -3,8 +3,14 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { getSponsorships } from '../../services/api.ts';
 import { Sponsorship } from '../../interfaces/types';
 
+// Extended interface for sponsorships with joined data
+interface SponsorshipWithDetails extends Sponsorship {
+  sponsor_name: string;
+  team_name: string;
+}
+
 const SponsorshipList: React.FC = () => {
-  const [sponsorships, setSponsorships] = useState<Sponsorship[]>([]);
+  const [sponsorships, setSponsorships] = useState<SponsorshipWithDetails[]>([]);
 
   useEffect(() => {
     const fetchSponsorships = async () => {
@@ -32,11 +38,11 @@ const SponsorshipList: React.FC = () => {
         </TableHead>
         <TableBody>
           {sponsorships.map((sponsorship) => (
-            <TableRow key={`${sponsorship.sponsor_id}-${sponsorship.team_name}`}>
+            <TableRow key={`${sponsorship.sponsor_id}-${sponsorship.team_id}`}>
               <TableCell>{sponsorship.sponsor_name}</TableCell>
               <TableCell>{sponsorship.team_name}</TableCell>
-              <TableCell>{new Date(sponsorship.start_date).toLocaleDateString()}</TableCell>
-              <TableCell>{sponsorship.end_date ? new Date(sponsorship.end_date).toLocaleDateString() : 'Ongoing'}</TableCell>
+              <TableCell>{sponsorship.start_date}</TableCell>
+              <TableCell>{sponsorship.end_date}</TableCell>
             </TableRow>
           ))}
         </TableBody>

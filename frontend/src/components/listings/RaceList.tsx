@@ -3,8 +3,13 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { getRaces } from '../../services/api.ts';
 import { Race } from '../../interfaces/types';
 
+
+interface RaceWithDetails extends Race {
+  participation_count: number;
+}
+
 const RaceList: React.FC = () => {
-  const [races, setRaces] = useState<Race[]>([]);
+  const [races, setRaces] = useState<RaceWithDetails[]>([]);
 
   useEffect(() => {
     const fetchRaces = async () => {
@@ -37,7 +42,7 @@ const RaceList: React.FC = () => {
             <TableRow key={race.race_id}>
               <TableCell>{race.race_id}</TableCell>
               <TableCell>{race.circuit}</TableCell>
-              <TableCell>{new Date(race.date).toLocaleDateString()}</TableCell>
+              <TableCell>{race.date}</TableCell>
               <TableCell>{race.track}</TableCell>
               <TableCell>{race.weather_conditions}</TableCell>
               <TableCell>{race.participation_count}</TableCell>

@@ -3,8 +3,15 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { getBelongs } from '../../services/api.ts';
 import { Belongs } from '../../interfaces/types';
 
+
+interface BelongsWithDetails extends Belongs {
+  driver_name: string;
+  car_number: number;
+  team_name: string;
+}
+
 const BelongsList: React.FC = () => {
-  const [belongs, setBelongs] = useState<Belongs[]>([]);
+  const [belongs, setBelongs] = useState<BelongsWithDetails[]>([]);
 
   useEffect(() => {
     const fetchBelongs = async () => {
@@ -33,11 +40,11 @@ const BelongsList: React.FC = () => {
         </TableHead>
         <TableBody>
           {belongs.map((belong) => (
-            <TableRow key={`${belong.driver_id}-${belong.car_number}`}>
+            <TableRow key={`${belong.driver_id}-${belong.car_id}-${belong.team_id}`}>
               <TableCell>{belong.driver_name}</TableCell>
               <TableCell>{belong.car_number}</TableCell>
               <TableCell>{belong.team_name}</TableCell>
-              <TableCell>{new Date(belong.start_date).toLocaleDateString()}</TableCell>
+              <TableCell>{belong.start_date}</TableCell>
               <TableCell>{belong.end_date ? new Date(belong.end_date).toLocaleDateString() : 'Current'}</TableCell>
             </TableRow>
           ))}

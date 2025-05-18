@@ -3,8 +3,14 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { getDrivers } from '../../services/api.ts';
 import { Driver } from '../../interfaces/types';
 
+
+interface DriverWithDetails extends Driver {
+  person_name: string;
+  team_name: string;
+}
+
 const DriverList: React.FC = () => {
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [drivers, setDrivers] = useState<DriverWithDetails[]>([]);
 
   useEffect(() => {
     const fetchDrivers = async () => {
@@ -36,8 +42,8 @@ const DriverList: React.FC = () => {
           {drivers.map((driver) => (
             <TableRow key={driver.driver_id}>
               <TableCell>{driver.driver_id}</TableCell>
-              <TableCell>{driver.name}</TableCell>
-              <TableCell>{driver.team}</TableCell>
+              <TableCell>{driver.person_name}</TableCell>
+              <TableCell>{driver.team_name}</TableCell>
               <TableCell>{driver.total_points}</TableCell>
               <TableCell>{driver.wins}</TableCell>
               <TableCell>{driver.pole_positions}</TableCell>
