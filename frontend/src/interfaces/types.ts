@@ -17,15 +17,16 @@ export interface Driver {
   total_points: number;
   wins: number;
   pole_positions: number;
-  nif: number;
+  nif: string;
   team_id: number;
 }
+
 
 export interface Sponsor {
   sponsor_id: number;
   contract_value: number;
   sector: string;
-  nif: number;
+  nif: string;
   team_id: number;
 }
 
@@ -33,7 +34,7 @@ export interface Mechanic {
   mechanic_id: number;
   specialty: string;
   experience: number;
-  nif: number;
+  nif: string;
   team_id: number;
 }
 

@@ -37,7 +37,7 @@ const Header: React.FC = () => {
             color: ""
           }}
         >
-          SpeedTrack F1 Management System
+          SpeedTrack NASCAR Management System
         </Typography>
       </Toolbar>
     </AppBar>

@@ -64,17 +64,28 @@ const TeamList: React.FC = () => {
     const { name, value } = e.target;
     setCurrentTeam(prev => ({
       ...prev,
-      [name]: name === 'budget' ? parseFloat(value) || 0 : value
+      [name]: name === 'budget' || name === 'team_id' 
+        ? parseFloat(value) || 0 
+        : value
     }));
   };
 
   const handleSubmit = async () => {
     try {
-      if (isEdit && currentTeam.team_id) {
+      if (!currentTeam.team_id || !currentTeam.name || currentTeam.budget === undefined) {
+        throw new Error('All fields are required');
+      }
+
+      if (isEdit) {
         await updateTeam(currentTeam.team_id, currentTeam);
       } else {
-        await createTeam(currentTeam);
+        await createTeam({
+          team_id: currentTeam.team_id as number,
+          name: currentTeam.name as string,
+          budget: currentTeam.budget as number,
+        });
       }
+      
       fetchTeams();
       handleCloseDialog();
     } catch (error) {
