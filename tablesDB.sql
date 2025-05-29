@@ -136,3 +136,18 @@ CREATE TABLE Belongs (
     FOREIGN KEY (team_id) REFERENCES Team(team_id),
     FOREIGN KEY (car_id) REFERENCES Car(car_id)
 )
+
+-- Triggers
+CREATE TRIGGER MaintainBelongsOnCarInsert
+ON Car
+AFTER INSERT
+AS
+BEGIN 
+    INSERT INTO Belongs (start_date, end_date, car_id, driver_id, team_id)
+    SELECT car_id, driver_id, team_id, GETDATE(), NULL
+    FROM inserted;
+    WHERE NOT EXISTS (
+        SELECT 1 FROM Belongs b 
+        WHERE b.car_id = i.car_id AND b.driver_id = i.driver_id AND b.team_id = i.team_id
+    );
+END;

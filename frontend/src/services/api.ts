@@ -169,6 +169,41 @@ export const getCars = async () => {
   return response.data;
 };
 
+export const createCar = async (carData: {
+  car_id: number;
+  number: number;
+  chassis_model: string;
+  engine_type: string;
+  weight: number;
+  manufacture_date: string;
+  team_id: number;
+  driver_id: number;
+}) => {
+  const response = await axios.post(`${API_BASE_URL}/cars`, carData);
+  return response.data;
+};
+
+export const updateCar = async (
+  carId: number,
+  carData: {
+    number?: number;
+    chassis_model?: string;
+    engine_type?: string;
+    weight?: number;
+    manufacture_date?: string;
+    team_id?: number;
+    driver_id?: number;
+  }
+) => {
+  const response = await axios.put(`${API_BASE_URL}/cars/${carId}`, carData);
+  return response.data;
+};
+
+export const deleteCar = async (carId: number) => {
+  const response = await axios.delete(`${API_BASE_URL}/cars/${carId}`);
+  return response.data;
+};
+
 export const getRaces = async () => {
   const response = await axios.get(`${API_BASE_URL}/races`);
   return response.data;

@@ -5,3 +5,6 @@ print("Database tables created successfully!")
 
 execute_sql_file('populateDB.sql')
 print("Database populated successfully!")
+
+execute_sql_file('indexes.sql')
+print("Database indexes created successfully!")
