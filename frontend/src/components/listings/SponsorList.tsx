@@ -17,11 +17,12 @@ import {
   MenuItem,
   Select,
   InputLabel,
-  FormControl
+  FormControl,
+  SelectChangeEvent
 } from '@mui/material';
 import { getSponsors, createPerson, createSponsor, getPersons, getTeams } from '../../services/api.ts';
 import { Sponsor, Person, Team } from '../../interfaces/types';
-
+import { Add } from '@mui/icons-material';
 interface SponsorWithDetails extends Sponsor {
   person_name: string;
   team_name: string;
@@ -150,10 +151,10 @@ const SponsorsList: React.FC = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
-        <Button variant="contained" color="primary" onClick={handleOpenPersonDialog}>
+        <Button variant="contained" color="primary" startIcon={<Add />} onClick={handleOpenPersonDialog}>
           Add Person
         </Button>
-        <Button variant="contained" color="secondary" onClick={handleOpenSponsorDialog}>
+        <Button variant="contained" color="secondary" startIcon={<Add />} onClick={handleOpenSponsorDialog}>
           Add Sponsor
         </Button>
       </Box>

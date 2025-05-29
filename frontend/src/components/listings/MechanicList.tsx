@@ -148,6 +148,7 @@ const MechanicList: React.FC = () => {
         <Button 
           variant="contained" 
           color="primary" 
+          startIcon={<Add />}
           onClick={handleOpenPersonDialog}
         >
           Add Person
@@ -155,6 +156,7 @@ const MechanicList: React.FC = () => {
         <Button 
           variant="contained" 
           color="secondary" 
+          startIcon={<Add />}
           onClick={handleOpenMechanicDialog}
         >
           Add Mechanic

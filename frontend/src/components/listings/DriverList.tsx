@@ -152,6 +152,7 @@ const DriverList: React.FC = () => {
         <Button 
           variant="contained" 
           color="primary" 
+          startIcon={<Add />}
           onClick={handleOpenPersonDialog}
         >
           Add Person
@@ -159,6 +160,7 @@ const DriverList: React.FC = () => {
         <Button 
           variant="contained" 
           color="secondary" 
+          startIcon={<Add />}
           onClick={handleOpenDriverDialog}
         >
           Add Driver
