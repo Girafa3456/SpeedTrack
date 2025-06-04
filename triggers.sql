@@ -13,7 +13,7 @@ BEGIN
     );
 END
 
--- Assign points automatically on Participation insert if not provided
+-- Assign points automatically on Participation insert if not provided (NOT WORKING YET)
 CREATE TRIGGER AutoAssignPointsOnParticipationInsert
 ON Participation
 AFTER INSERT
