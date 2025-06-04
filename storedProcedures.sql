@@ -10,7 +10,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     
-    -- Check driver eligibility using UDF
+    -- Check using UDF
     IF dbo.IsDriverEligible(@driver_id) = 0
     BEGIN
         RAISERROR('Driver is not eligible (must be 18+)', 16, 1);
@@ -21,7 +21,6 @@ BEGIN
     INSERT INTO Participation (driver_id, car_id, race_id, final_position, points_earned)
     VALUES (@driver_id, @car_id, @race_id, @final_position, @points_earned);
     
-    -- If points weren't provided, calculate them
     IF @points_earned IS NULL AND @final_position IS NOT NULL
     BEGIN
         SET @points_earned = CASE 
@@ -43,12 +42,11 @@ BEGIN
         WHERE driver_id = @driver_id AND car_id = @car_id AND race_id = @race_id;
     END
     
-    -- Update driver's total points
     UPDATE Driver
     SET total_points = total_points + ISNULL(@points_earned, 0)
     WHERE driver_id = @driver_id;
     
-    -- If won the race, increment wins (using your existing trigger)
+
     IF @final_position = 1
     BEGIN
         UPDATE Driver
@@ -89,11 +87,10 @@ BEGIN
     DECLARE @old_team_id INT;
     DECLARE @car_id INT;
     
-    -- Get current team and car
+
     SELECT @old_team_id = team_id FROM Driver WHERE driver_id = @driver_id;
     SELECT @car_id = car_id FROM Car WHERE driver_id = @driver_id;
-    
-    -- Validate
+
     IF @old_team_id IS NULL
     BEGIN
         RAISERROR('Driver not found', 16, 1);
@@ -106,12 +103,12 @@ BEGIN
         RETURN -1;
     END
     
-    -- Update driver's team
+
     UPDATE Driver
     SET team_id = @new_team_id
     WHERE driver_id = @driver_id;
     
-    -- Update car's team if exists
+
     IF @car_id IS NOT NULL
     BEGIN
         UPDATE Car

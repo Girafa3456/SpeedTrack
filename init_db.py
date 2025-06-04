@@ -2,7 +2,7 @@ from f_utils import execute_sql_file, execute_triggers_file, execute_udfs_file, 
 
 execute_dropall_file('dropAll.sql')
 print("All database objects dropped successfully!")
-"""
+
 execute_sql_file('tablesDB.sql')
 print("Database tables created successfully!")
 
@@ -20,4 +20,3 @@ print("User-Defined Functions created successfully!")
 
 execute_stored_procedures_file('storedProcedures.sql')
 print("Stored Procedures created successfully!")
-"""

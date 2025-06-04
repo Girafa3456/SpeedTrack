@@ -214,7 +214,7 @@ ON Driver
 AFTER UPDATE
 AS
 BEGIN
-    -- Update team's total points (if you add this column to Team)
+    
     UPDATE Team
     SET total_points = (
         SELECT SUM(total_points)
