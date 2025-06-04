@@ -18,11 +18,12 @@ import {
   Select,
   InputLabel,
   FormControl,
-  SelectChangeEvent
+  SelectChangeEvent,
+  IconButton
 } from '@mui/material';
-import { getSponsors, createPerson, createSponsor, getPersons, getTeams } from '../../services/api.ts';
+import { getSponsors, createPerson, createSponsor, updateSponsor, deleteSponsor, getPersons, getTeams } from '../../services/api.ts';
 import { Sponsor, Person, Team } from '../../interfaces/types';
-import { Add } from '@mui/icons-material';
+import { Add, Edit, Delete} from '@mui/icons-material';
 interface SponsorWithDetails extends Sponsor {
   person_name: string;
   team_name: string;
@@ -53,6 +54,15 @@ const SponsorsList: React.FC = () => {
   });
   const [persons, setPersons] = useState<Person[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [isEdit, setIsEdit] = useState(false)
+  const [currentSponsor, setCurrentSponsor] = useState({
+    sponsor_id: 0,
+    nif: '',
+    team_id: 0,
+    contract_value: 0,
+    sector: ''
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,6 +90,17 @@ const SponsorsList: React.FC = () => {
   // Sponsor Dialog Handlers
   const handleOpenSponsorDialog = () => setOpenSponsorDialog(true);
   const handleCloseSponsorDialog = () => setOpenSponsorDialog(false);
+  const handleOpenEditSponsorDialog = (sponsor: any) => {
+    setIsEdit(true);
+    setCurrentSponsor({
+      sponsor_id: sponsor.sponsor_id,
+      nif: sponsor.nif,
+      team_id: sponsor.team_id,
+      contract_value: sponsor.contract_value,
+      sector: sponsor.sector
+    });
+    setOpenDialog(true);
+  };
 
   // Input Change Handlers
   const handlePersonInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,6 +118,46 @@ const SponsorsList: React.FC = () => {
         ? Number(value) 
         : value
     }));
+  };
+
+  //Edit and delete Handlers
+  const handleCurrentSponsorChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<number | string>
+  ) => {
+    const name = e.target.name as keyof typeof currentSponsor;
+    const value = e.target.value;
+
+    setCurrentSponsor(prev => ({
+      ...prev,
+      [name]: name === 'team_id' || name === 'contract_value'
+        ? Number(value)
+        : value
+    }));
+  };
+
+  const handleSaveSponsor = async () => {
+    try {
+      await updateSponsor(currentSponsor.sponsor_id, {
+        contract_value: currentSponsor.contract_value,
+        sector: currentSponsor.sector,
+        team_id: currentSponsor.team_id
+      });
+
+      const sponsorsData = await getSponsors();
+      setSponsors(sponsorsData);
+      setOpenDialog(false);
+    } catch (error) {
+      console.error('Error updating sponsor:', error);
+    }
+  };
+
+  const handleDeleteSponsor = async (sponsorId: number) => {
+    try {
+      await deleteSponsor(sponsorId);
+      setSponsors(prev => prev.filter(s => s.sponsor_id !== sponsorId));
+    } catch (error) {
+      console.error('Error deleting sponsor:', error);
+    }
   };
 
   // Form Submission Handlers
@@ -168,6 +229,7 @@ const SponsorsList: React.FC = () => {
               <TableCell>Team</TableCell>
               <TableCell>Contract Value</TableCell>
               <TableCell>Sector</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -178,6 +240,14 @@ const SponsorsList: React.FC = () => {
                 <TableCell>{sponsor.team_name}</TableCell>
                 <TableCell>${sponsor.contract_value.toLocaleString()}</TableCell>
                 <TableCell>{sponsor.sector}</TableCell>
+                <TableCell>
+                  <IconButton onClick={() => handleOpenEditSponsorDialog(sponsor)} sx={{ mr: 1}}>
+                    <Edit color="primary" />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteSponsor(sponsor.sponsor_id)}>
+                    <Delete color="error" />
+                  </IconButton>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -303,6 +373,44 @@ const SponsorsList: React.FC = () => {
         <DialogActions>
           <Button onClick={handleCloseSponsorDialog}>Cancel</Button>
           <Button onClick={handleCreateSponsor} color="secondary">Create</Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Eddit Sponsor Dialog */}
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>{isEdit ? 'Edit Sponsor' : 'Add Sponsor'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              label="Sponsor ID"
+              name="sponsor_id"
+              type="number"
+              value={currentSponsor.sponsor_id}
+              disabled
+              fullWidth
+            />
+            <TextField
+              label="Contract Value"
+              name="contract_value"
+              type="number"
+              value={currentSponsor.contract_value}
+              onChange={handleCurrentSponsorChange}
+              fullWidth
+            />
+            <TextField
+              label="Sector"
+              name="sector"
+              value={currentSponsor.sector}
+              onChange={handleCurrentSponsorChange}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <Button onClick={handleSaveSponsor} color="primary" variant="contained">
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

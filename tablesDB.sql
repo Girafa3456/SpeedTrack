@@ -33,7 +33,7 @@ CREATE TABLE Driver (
 
     nif VARCHAR(20) NOT NULL,
     team_id INT NOT NULL,
-    FOREIGN KEY (nif) REFERENCES Person(nif),
+    FOREIGN KEY (nif) REFERENCES Person(nif) ON DELETE CASCADE,
     FOREIGN KEY (team_id) REFERENCES Team(team_id)
 );
 
@@ -44,7 +44,7 @@ CREATE TABLE Sponsor (
     
     team_id INT NOT NULL,
     nif VARCHAR(20) NOT NULL,
-    FOREIGN KEY (nif) REFERENCES Person(nif),
+    FOREIGN KEY (nif) REFERENCES Person(nif) ON DELETE CASCADE,
     FOREIGN KEY (team_id) REFERENCES Team(team_id)
 );
 
@@ -55,7 +55,7 @@ CREATE TABLE Mechanic (
     
     team_id INT NOT NULL,
     nif VARCHAR(20) NOT NULL,
-    FOREIGN KEY (nif) REFERENCES Person(nif),
+    FOREIGN KEY (nif) REFERENCES Person(nif) ON DELETE CASCADE,
     FOREIGN KEY (team_id) REFERENCES Team(team_id)
 );
 
@@ -91,9 +91,9 @@ CREATE TABLE Participation (
 
     PRIMARY KEY (driver_id, car_id, race_id),
 
-    FOREIGN KEY (driver_id) REFERENCES Driver(driver_id),
-    FOREIGN KEY (car_id) REFERENCES Car(car_id),
-    FOREIGN KEY (race_id) REFERENCES Race(race_id)
+    FOREIGN KEY (driver_id) REFERENCES Driver(driver_id) ON DELETE CASCADE,
+    FOREIGN KEY (car_id) REFERENCES Car(car_id) ON DELETE CASCADE,
+    FOREIGN KEY (race_id) REFERENCES Race(race_id) ON DELETE CASCADE
 );
 
 CREATE TABLE Works_On (
@@ -105,8 +105,8 @@ CREATE TABLE Works_On (
 
     PRIMARY KEY (mechanic_id, car_id),
 
-    FOREIGN KEY (mechanic_id) REFERENCES Mechanic(mechanic_id),
-    FOREIGN KEY (car_id) REFERENCES Car(car_id)
+    FOREIGN KEY (mechanic_id) REFERENCES Mechanic(mechanic_id) ON DELETE CASCADE,
+    FOREIGN KEY (car_id) REFERENCES Car(car_id) ON DELETE CASCADE
 );
 
 CREATE TABLE Sponsorship (
@@ -118,13 +118,13 @@ CREATE TABLE Sponsorship (
 
     PRIMARY KEY (sponsor_id, team_id),
 
-    FOREIGN KEY (sponsor_id) REFERENCES Sponsor(sponsor_id),
-    FOREIGN KEY (team_id) REFERENCES Team(team_id)
+    FOREIGN KEY (sponsor_id) REFERENCES Sponsor(sponsor_id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES Team(team_id) ON DELETE CASCADE
 );
 
 CREATE TABLE Belongs (
     start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
+    end_date DATE,
 
     car_id INT NOT NULL,
     driver_id INT NOT NULL,
@@ -132,22 +132,7 @@ CREATE TABLE Belongs (
 
     PRIMARY KEY (driver_id, car_id, team_id),
 
-    FOREIGN KEY (driver_id) REFERENCES Driver(driver_id),
-    FOREIGN KEY (team_id) REFERENCES Team(team_id),
-    FOREIGN KEY (car_id) REFERENCES Car(car_id)
+    FOREIGN KEY (driver_id) REFERENCES Driver(driver_id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES Team(team_id) ON DELETE CASCADE,
+    FOREIGN KEY (car_id) REFERENCES Car(car_id) ON DELETE CASCADE
 )
-
--- Triggers
-CREATE TRIGGER MaintainBelongsOnCarInsert
-ON Car
-AFTER INSERT
-AS
-BEGIN 
-    INSERT INTO Belongs (start_date, end_date, car_id, driver_id, team_id)
-    SELECT car_id, driver_id, team_id, GETDATE(), NULL
-    FROM inserted;
-    WHERE NOT EXISTS (
-        SELECT 1 FROM Belongs b 
-        WHERE b.car_id = i.car_id AND b.driver_id = i.driver_id AND b.team_id = i.team_id
-    );
-END;

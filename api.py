@@ -611,7 +611,7 @@ def create_car():
     try:
         execute_query(query, params, fetch=False)
         return jsonify({'message': 'Car created successfully'}), 201
-    except Exception as e:
+    except Exception as e:      
         return jsonify({'error': str(e)}), 400
     
 # PUT

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { Mechanic } from '../interfaces/types.ts';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -63,7 +62,7 @@ export const updateDriver = async (
     total_points?: number;
     wins?: number;
     pole_positions?: number;
-    nif?: number;
+    nif?: string;
     team_id?: number;
   }
 ) => {
@@ -114,18 +113,33 @@ export const getMechanics = async () => {
   return response.data;
 };
 
-export const createMechanic = async (mechanic: Omit<Mechanic, 'mechanic_id'> & { mechanic_id?: number }) => {
-  const response = await fetch('/api/mechanics', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(mechanic),
-  });
-  if (!response.ok) {
-    throw new Error('Failed to create mechanic');
+export const createMechanic = async (mechanic: {
+  mechanic_id: number;
+  specialty: string;
+  experience: number;
+  nif: string;
+  team_id: number;
+}) => {
+  const response = await axios.post(`${API_BASE_URL}/mechanics`, mechanic);
+  return response.data;
+};
+
+export const updateMechanic = async (
+  mechanicId: number,
+  mechanicData: {
+    specialty?: string;
+    experience?: number;
+    nif?: string;
+    team_id?: number;
   }
-  return response.json();
+) => {
+  const response = await axios.put(`${API_BASE_URL}/mechanics/${mechanicId}`, mechanicData);
+  return response.data;
+};
+
+export const deleteMechanic = async (mechanicId: number) => {
+  const response = await axios.delete(`${API_BASE_URL}/mechanics/${mechanicId}`);
+  return response.data;
 };
 
 // Teams
@@ -209,8 +223,72 @@ export const getRaces = async () => {
   return response.data;
 };
 
+export const createRace = async (raceData: {
+  race_id: number;
+  circuit: string;
+  date: string;
+  track: string;
+  weather_conditions: string;
+}) => {
+  const response = await axios.post(`${API_BASE_URL}/races`, raceData);
+  return response.data;
+};
+
+export const updateRace = async (
+  raceId: number,
+  raceData: {
+    circuit?: string;
+    date?: string;
+    track?: string;
+    weather_conditions?: string;
+  }
+) => {
+  const response = await axios.put(`${API_BASE_URL}/races/${raceId}`, raceData);
+  return response.data;
+};
+
+export const deleteRace = async (raceId: number) => {
+  const response = await axios.delete(`${API_BASE_URL}/races/${raceId}`);
+  return response.data;
+};
+
 export const getParticipations = async () => {
   const response = await axios.get(`${API_BASE_URL}/participations`);
+  return response.data;
+};
+
+export const createParticipation = async (data: {
+  driver_id: number;
+  car_id: number;
+  race_id: number;
+  final_position?: number;
+  points_earned?: number;
+}) => {
+  const response = await axios.post(`${API_BASE_URL}/participations`, data);
+  return response.data;
+};
+
+export const updateParticipation = async (data: {
+  driver_id: number;
+  car_id: number;
+  race_id: number;
+  final_position?: number;
+  points_earned?: number;
+}) => {
+  const response = await axios.put(`${API_BASE_URL}/participations`, data);
+  return response.data;
+};
+
+export const deleteParticipation = async (data: {
+  driver_id: number;
+  car_id: number;
+  race_id: number;
+}) => {
+  const response = await axios({
+    method: 'DELETE',
+    url: `${API_BASE_URL}/participations`,
+    data,
+  });
   return response.data;
 };
 

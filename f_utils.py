@@ -1,4 +1,5 @@
 import pyodbc
+import re
 
 # Use the same connection string from your api.py
 conn_str = """
@@ -11,7 +12,7 @@ TrustServerCertificate=yes;
 """
 
 def execute_sql_file(filename):
-    with open(filename, 'r') as f:
+    with open(filename, 'r', encoding='utf-8') as f:
         sql = f.read()
     
     # Split the SQL file into separate commands
@@ -31,5 +32,25 @@ def execute_sql_file(filename):
     cursor.close()
     conn.close()
 
-execute_sql_file('tablesDB.sql')
-print("Database tables created successfully!")
+def execute_triggers_file(filename):
+    with open(filename, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # Divide por cada CREATE TRIGGER pero sin partir el contenido dentro del bloque
+    trigger_blocks = re.split(r'(?=CREATE TRIGGER)', content, flags=re.IGNORECASE)
+
+    conn = pyodbc.connect(conn_str, autocommit=True)
+    cursor = conn.cursor()
+
+    for block in trigger_blocks:
+        block = block.strip()
+        if not block:
+            continue
+        try:
+            cursor.execute(block)
+            print("Executed:\n", block[:80].replace('\n', ' ') + "...")
+        except Exception as e:
+            print("Error executing block:\n", block[:80].replace('\n', ' ') + "...\n", e)
+
+    cursor.close()
+    conn.close()
