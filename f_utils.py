@@ -1,7 +1,6 @@
 import pyodbc
 import re
 
-# Use the same connection string from your api.py
 conn_str = """
 DRIVER={ODBC Driver 17 for SQL Server};
 SERVER=mednat.ieeta.pt,8101;
@@ -51,6 +50,75 @@ def execute_triggers_file(filename):
             print("Executed:\n", block[:80].replace('\n', ' ') + "...")
         except Exception as e:
             print("Error executing block:\n", block[:80].replace('\n', ' ') + "...\n", e)
+
+    cursor.close()
+    conn.close()
+
+def execute_udfs_file(filename):
+    """Execute a SQL file containing User-Defined Functions"""
+    with open(filename, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    
+    udf_blocks = re.split(r'(?=CREATE FUNCTION)', content, flags=re.IGNORECASE)
+
+    conn = pyodbc.connect(conn_str, autocommit=True)
+    cursor = conn.cursor()
+
+    for block in udf_blocks:
+        block = block.strip()
+        if not block:
+            continue
+        try:
+            cursor.execute(block)
+            print("Executed UDF:\n", block[:80].replace('\n', ' ') + "...")
+        except Exception as e:
+            print("Error executing UDF:\n", block[:80].replace('\n', ' ') + "...\n", e)
+
+    cursor.close()
+    conn.close()
+
+def execute_stored_procedures_file(filename):
+    """Execute a SQL file containing Stored Procedures"""
+    with open(filename, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+   
+    proc_blocks = re.split(r'(?=CREATE PROCEDURE)', content, flags=re.IGNORECASE)
+
+    conn = pyodbc.connect(conn_str, autocommit=True)
+    cursor = conn.cursor()
+
+    for block in proc_blocks:
+        block = block.strip()
+        if not block:
+            continue
+        try:
+            cursor.execute(block)
+            print("Executed Procedure:\n", block[:80].replace('\n', ' ') + "...")
+        except Exception as e:
+            print("Error executing Procedure:\n", block[:80].replace('\n', ' ') + "...\n", e)
+
+    cursor.close()
+    conn.close()
+
+def execute_dropall_file(filename):
+    """Executes dropAll.sql which contains complex multi-statement T-SQL code."""
+    import re
+    with open(filename, 'r', encoding='utf-8') as f:
+        sql = f.read()
+
+    # Remove 'GO' statements, which are not understood by pyodbc
+    sql = re.sub(r'^\s*GO\s*$', '', sql, flags=re.MULTILINE | re.IGNORECASE)
+
+    conn = pyodbc.connect(conn_str, autocommit=True)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(sql)
+        print(f"Executed dropAll file: {filename}")
+    except Exception as e:
+        print(f"Error executing dropAll.sql:\n{e}")
 
     cursor.close()
     conn.close()

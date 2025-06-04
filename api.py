@@ -850,22 +850,37 @@ def get_race(race_id):
 @app.route('/api/participations', methods=['POST'])
 def create_participation():
     data = request.get_json()
-    query = """
-    INSERT INTO Participation (driver_id, car_id, race_id, final_position, points_earned)
-    VALUES (?, ?, ?, ?, ?)
-    """
-    params = (
-        data['driver_id'],
-        data['car_id'],
-        data['race_id'],
-        data.get('final_position'),
-        data.get('points_earned', 0)
-    )
     try:
-        execute_query(query, params, fetch=False)
-        return jsonify({'message': 'Participation created successfully'}), 201
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Prepare parameters including output parameter
+        params = [
+            data['driver_id'],
+            data['car_id'],
+            data['race_id'],
+            data.get('final_position'),
+            None  # Placeholder for output parameter
+        ]
+        
+        # Execute stored procedure
+        cursor.execute("{CALL dbo.RegisterParticipation(?, ?, ?, ?, ?)}", params)
+        
+        points_earned = params[4]
+        
+        conn.commit()
+        
+        return jsonify({
+            'message': 'Participation registered successfully',
+            'points_earned': points_earned
+        }), 201
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+    finally:
+        cursor.close()
+        conn.close()
+    
 # PUT
 @app.route('/api/participations', methods=['PUT'])
 def update_participation():
@@ -1199,6 +1214,89 @@ def get_belongs():
         b['start_date'] = b['start_date'].isoformat() if b['start_date'] else None
         b['end_date'] = b['end_date'].isoformat() if b['end_date'] else None
     return jsonify(belongs)
+
+
+@app.route('/api/teams/report', methods=['GET'])
+def get_teams_report():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Execute stored procedure
+        cursor.execute("{CALL dbo.GetTeamReport}")
+        
+        # Get results
+        columns = [column[0] for column in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/api/drivers/<int:driver_id>/transfer', methods=['POST'])
+def transfer_driver(driver_id):
+    data = request.get_json()
+    new_team_id = data.get('new_team_id')
+    
+    if not new_team_id:
+        return jsonify({'error': 'new_team_id is required'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Execute stored procedure
+        cursor.execute("{CALL dbo.TransferDriver(?, ?)}", (driver_id, new_team_id))
+        conn.commit()
+        
+        return jsonify({'message': 'Driver transferred successfully'})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/api/drivers/<int:driver_id>/average_position', methods=['GET'])
+def get_driver_average_position(driver_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Execute UDF
+        cursor.execute("SELECT dbo.GetDriverAveragePosition(?)", (driver_id,))
+        avg_position = cursor.fetchone()[0]
+        
+        return jsonify({'average_position': float(avg_position)})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/api/teams/<int:team_id>/total_points', methods=['GET'])
+def get_team_total_points(team_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Execute UDF
+        cursor.execute("SELECT dbo.GetTeamTotalPoints(?)", (team_id,))
+        total_points = cursor.fetchone()[0]
+        
+        return jsonify({'total_points': total_points})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    finally:
+        cursor.close()
+        conn.close()
+
 
 if __name__ == '__main__':
     app.run(debug=True)
