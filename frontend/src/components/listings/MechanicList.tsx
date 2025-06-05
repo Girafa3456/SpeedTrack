@@ -28,6 +28,11 @@ import { SelectChangeEvent } from '@mui/material';
 interface MechanicWithDetails extends Mechanic {
   person_name: string;
   team_name: string;
+  works_on?: {  
+    idate: string;
+    edate: string;
+    car_id: number;
+  };
 }
 
 const MechanicList: React.FC = () => {
@@ -40,7 +45,8 @@ const MechanicList: React.FC = () => {
     specialty: '',
     experience: 0,
     nif: '',
-    team_id: 0
+    team_id: 0,
+    edate: ''
   });
 
   const [newPerson, setNewPerson] = useState<Person>({
@@ -50,12 +56,16 @@ const MechanicList: React.FC = () => {
     nationality: ''
   });
 
-  const [newMechanic, setNewMechanic] = useState<Omit<Mechanic, 'mechanic_id'> & { mechanic_id?: number }>({
+  const [newMechanic, setNewMechanic] = useState<Omit<Mechanic, 'mechanic_id'> & { 
+    mechanic_id?: number,
+    edate: string 
+  }>({
     mechanic_id: undefined,
     specialty: '',
     experience: 0,
     nif: '',
-    team_id: 0
+    team_id: 0,
+    edate: ''
   });
 
   const [persons, setPersons] = useState<Person[]>([]);
@@ -86,7 +96,14 @@ const MechanicList: React.FC = () => {
   const handleCloseMechanicDialog = () => {
     setOpenMechanicDialog(false);
     setIsEdit(false);
-    setCurrentMechanic({ mechanic_id: 0, specialty: '', experience: 0, nif: '', team_id: 0 });
+    setCurrentMechanic({ 
+      mechanic_id: 0, 
+      specialty: '', 
+      experience: 0, 
+      nif: '', 
+      team_id: 0,
+      edate: ''
+    });
   };
 
   const handleOpenEditDialog = (mechanic: MechanicWithDetails) => {
@@ -96,7 +113,8 @@ const MechanicList: React.FC = () => {
       specialty: mechanic.specialty,
       experience: mechanic.experience,
       nif: mechanic.nif,
-      team_id: mechanic.team_id
+      team_id: mechanic.team_id,
+      edate: mechanic.works_on?.edate || '' 
     });
     setOpenMechanicDialog(true);
   };
@@ -137,11 +155,22 @@ const MechanicList: React.FC = () => {
 
   const handleCreateMechanic = async () => {
     try {
-      await createMechanic({ ...newMechanic, mechanic_id: newMechanic.mechanic_id || 0 });
+      const { edate, ...mechanicData } = newMechanic;
+      await createMechanic({ 
+        ...mechanicData, 
+        mechanic_id: newMechanic.mechanic_id || 0
+      });
       const mechanicsData = await getMechanics();
       setMechanics(mechanicsData);
       setOpenMechanicDialog(false);
-      setNewMechanic({ specialty: '', experience: 0, nif: '', team_id: 0 });
+      setNewMechanic({ 
+        mechanic_id: undefined,
+        specialty: '', 
+        experience: 0, 
+        nif: '', 
+        team_id: 0,
+        edate: ''
+      });
     } catch (error) {
       console.error('Error creating mechanic:', error);
     }
@@ -149,7 +178,12 @@ const MechanicList: React.FC = () => {
 
   const handleSaveMechanic = async () => {
     try {
-      await updateMechanic(currentMechanic.mechanic_id, currentMechanic);
+      await updateMechanic(currentMechanic.mechanic_id, {
+        specialty: currentMechanic.specialty,
+        experience: currentMechanic.experience,
+        nif: currentMechanic.nif,
+        team_id: currentMechanic.team_id
+      });
       const mechanicsData = await getMechanics();
       setMechanics(mechanicsData);
       handleCloseMechanicDialog();
@@ -158,6 +192,7 @@ const MechanicList: React.FC = () => {
     }
   };
 
+  
   const handleDeleteMechanic = async (mechanicId: number) => {
     try {
       await deleteMechanic(mechanicId);
@@ -294,6 +329,17 @@ const MechanicList: React.FC = () => {
               name="experience"
               type="number"
               value={isEdit ? currentMechanic.experience : newMechanic.experience}
+              onChange={isEdit ? handleCurrentMechanicChange : handleMechanicInputChange}
+              fullWidth
+              required
+            />
+
+            <TextField
+              label="End Date"
+              name="edate"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              value={isEdit ? currentMechanic.edate : newMechanic.edate}
               onChange={isEdit ? handleCurrentMechanicChange : handleMechanicInputChange}
               fullWidth
               required

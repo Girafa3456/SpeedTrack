@@ -191,13 +191,17 @@ END;
 -- =============================================
 
 -- Maintain Sponsorship when Sponsor is inserted
-CREATE TRIGGER MaintainSponsorshipOnSponsorInsert
+CREATE OR ALTER TRIGGER MaintainSponsorshipOnSponsorInsert
 ON Sponsor
 AFTER INSERT
 AS
 BEGIN
     INSERT INTO Sponsorship (sponsor_id, team_id, start_date, end_date)
-    SELECT i.sponsor_id, i.team_id, GETDATE(), NULL
+    SELECT 
+        i.sponsor_id, 
+        i.team_id, 
+        GETDATE() AS start_date,
+        DATEADD(YEAR, 1, GETDATE()) AS end_date -- Default: 1 year
     FROM inserted i
     WHERE NOT EXISTS (
         SELECT 1 FROM Sponsorship s
@@ -248,13 +252,17 @@ END;
 -- MECHANIC TRIGGERS
 -- =============================================
 -- Automatically create Works_On relationships when Mechanic is assigned to team with cars
-CREATE TRIGGER MaintainWorksOnForMechanic
+CREATE OR ALTER TRIGGER MaintainWorksOnForMechanic
 ON Mechanic
 AFTER INSERT
 AS
 BEGIN
     INSERT INTO Works_On (mechanic_id, car_id, idate, edate)
-    SELECT i.mechanic_id, c.car_id, GETDATE(), NULL
+    SELECT 
+        i.mechanic_id, 
+        c.car_id, 
+        GETDATE() AS idate, 
+        DATEADD(YEAR, 1, GETDATE()) AS edate -- Default: 1 year
     FROM inserted i
     JOIN Car c ON c.team_id = i.team_id
     WHERE NOT EXISTS (

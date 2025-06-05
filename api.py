@@ -261,6 +261,17 @@ def create_sponsor():
     )
     try:
         execute_query(query, params, fetch=False)
+        
+        if 'end_date' in data and data['end_date']:
+            update_sponsorship_query = """
+            UPDATE Sponsorship
+            SET end_date = ?
+            WHERE sponsor_id = ? AND team_id = ?
+            """
+            execute_query(update_sponsorship_query, 
+                        (data['end_date'], data['sponsor_id'], data['team_id']), 
+                        fetch=False)
+        
         return jsonify({'message': 'Sponsor created successfully'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 400
@@ -388,10 +399,19 @@ def create_mechanic():
     )
     try:
         execute_query(query, params, fetch=False)
+        
+        if 'edate' in data and data['edate']:
+            update_works_on_query = """
+            UPDATE Works_On
+            SET edate = ?
+            WHERE mechanic_id = ? AND edate > GETDATE()
+            """
+            execute_query(update_works_on_query, (data['edate'], data['mechanic_id']), fetch=False)
+        
         return jsonify({'message': 'Mechanic created successfully'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-    
+      
 # PUT
 @app.route('/api/mechanics/<int:mechanic_id>', methods=['PUT'])
 def update_mechanic(mechanic_id):

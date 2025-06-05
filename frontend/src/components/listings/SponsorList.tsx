@@ -27,6 +27,8 @@ import { Add, Edit, Delete} from '@mui/icons-material';
 interface SponsorWithDetails extends Sponsor {
   person_name: string;
   team_name: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 const SponsorsList: React.FC = () => {
@@ -45,12 +47,14 @@ const SponsorsList: React.FC = () => {
     sector: string;
     team_id: number;
     nif: string;
+    end_date?: string;
   }>({
     sponsor_id: undefined,
     contract_value: 0,
     sector: '',
     team_id: 0,
-    nif: ''
+    nif: '',
+    end_date: ''
   });
   const [persons, setPersons] = useState<Person[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -293,6 +297,7 @@ const SponsorsList: React.FC = () => {
               fullWidth
               required
             />
+            
           </Box>
         </DialogContent>
         <DialogActions>
@@ -369,6 +374,16 @@ const SponsorsList: React.FC = () => {
               onChange={handleSponsorInputChange}
               fullWidth
               required
+            />
+
+            <TextField
+              label="End Date"
+              name="end_date"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              value={newSponsor.end_date || ''}
+              onChange={handleSponsorInputChange}
+              fullWidth
             />
           </Box>
         </DialogContent>
