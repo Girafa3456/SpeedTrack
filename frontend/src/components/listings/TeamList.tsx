@@ -17,7 +17,7 @@ import {
   Box
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
-import { getTeams, createTeam, updateTeam, deleteTeam } from '../../services/api.ts';
+import { getTeams, createTeam, updateTeam, deleteTeam, getTeamByName } from '../../services/api.ts';
 import { Team } from '../../interfaces/types';
 
 interface TeamWithDetails extends Team {
@@ -30,10 +30,20 @@ const TeamList: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [currentTeam, setCurrentTeam] = useState<Partial<Team>>({});
   const [isEdit, setIsEdit] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    fetchTeams();
-  }, []);
+    if (!searchTerm.trim()) {
+      fetchTeams(); 
+      return;
+    }
+
+    const filtered = teams.filter(team =>
+      team.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setTeams(filtered);
+  }, [searchTerm]);
+
 
   const fetchTeams = async () => {
     try {
@@ -104,7 +114,16 @@ const TeamList: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <TextField
+          label="Search by Name"
+          variant="outlined"
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+
+        
         <Button 
           variant="contained" 
           color="primary" 
@@ -115,6 +134,8 @@ const TeamList: React.FC = () => {
         </Button>
       </Box>
 
+
+      
       <TableContainer component={Paper}>
         <Table>
           <TableHead>

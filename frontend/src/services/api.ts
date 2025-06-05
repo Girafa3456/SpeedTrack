@@ -306,3 +306,21 @@ export const getBelongs = async () => {
   const response = await axios.get(`${API_BASE_URL}/belongs`);
   return response.data;
 };
+
+export const getTeamByName = async (team_name: string) => {
+  const response = await axios.get(`${API_BASE_URL}/teams/name/${encodeURIComponent(team_name)}`);
+  return response.data;
+};
+
+export const getCarByNumber = async (car_number: number) => {
+  const response = await axios.get(`${API_BASE_URL}/cars/number/${car_number}`);
+  return response.data;
+};
+
+export const getRaceByCircuit = async (circuit: string) => {
+  const response = await fetch(`/api/races/circuit/${encodeURIComponent(circuit)}`);
+  if (!response.ok) {
+    throw new Error('Error fetching race by circuit');
+  }
+  return response.json();
+};

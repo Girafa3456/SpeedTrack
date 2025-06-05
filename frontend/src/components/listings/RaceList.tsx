@@ -5,7 +5,7 @@ import {
   TextField, Box
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
-import { getRaces, createRace, updateRace, deleteRace } from '../../services/api.ts';
+import { getRaces, createRace, updateRace, deleteRace, getRaceByCircuit } from '../../services/api.ts';
 import { Race } from '../../interfaces/types';
 
 const RaceList: React.FC = () => {
@@ -13,10 +13,19 @@ const RaceList: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [currentRace, setCurrentRace] = useState<Partial<Race>>({});
   const [isEdit, setIsEdit] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      fetchData(); 
+      return;
+    }
+    fetchByCircuit(searchTerm);
+  }, [searchTerm]);
 
   const fetchData = async () => {
     try {
@@ -24,6 +33,15 @@ const RaceList: React.FC = () => {
       setRaces(data);
     } catch (error) {
       console.error('Error fetching races:', error);
+    }
+  };
+
+  const fetchByCircuit = async (circuit: string) => {
+    try {
+      const data = await getRaceByCircuit(circuit);
+      setRaces(data);
+    } catch (error) {
+      console.error('Error fetching by circuit:', error);
     }
   };
 
@@ -90,7 +108,14 @@ const RaceList: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <TextField
+          label="Search by Circuit"
+          variant="outlined"
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
         <Button variant="contained" color="primary" startIcon={<Add />} onClick={handleOpenAddDialog}>
           Add Race
         </Button>

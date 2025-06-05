@@ -589,6 +589,43 @@ def get_team(team_id):
     
     return jsonify(team[0])
 
+@app.route('/api/teams/name/<string:team_name>', methods=['GET'])
+def get_team_by_name(team_name):
+    team_query = """
+    SELECT t.*, 
+           (SELECT COUNT(*) FROM Driver d WHERE d.team_id = t.team_id) as driver_count,
+           (SELECT COUNT(*) FROM Sponsor s WHERE s.team_id = t.team_id) as sponsor_count
+    FROM Team t
+    WHERE t.name = ?
+    """
+    team = execute_query(team_query, (team_name,))
+    if not team:
+        return jsonify({'error': 'Team not found'}), 404
+    
+    drivers_query = """
+    SELECT d.driver_id, p.name 
+    FROM Driver d
+    JOIN Person p ON d.nif = p.nif
+    WHERE d.team_id = ?
+    """
+    drivers = execute_query(drivers_query, (team[0]['team_id'],))
+
+    sponsors_query = """
+    SELECT s.sponsor_id, p.name, s.contract_value
+    FROM Sponsor s
+    JOIN Person p ON s.nif = p.nif
+    WHERE s.team_id = ?
+    """
+    sponsors = execute_query(sponsors_query, (team[0]['team_id'],))
+    for s in sponsors:
+        s['contract_value'] = float(s['contract_value']) if s['contract_value'] is not None else 0.0
+    
+    team[0]['drivers'] = drivers
+    team[0]['sponsors'] = sponsors
+    team[0]['budget'] = float(team[0]['budget']) if team[0]['budget'] is not None else 0.0
+    
+    return jsonify(team[0])
+
 # Car #
 # POST
 @app.route('/api/cars', methods=['POST'])
@@ -731,6 +768,50 @@ def get_car(car_id):
     
     return jsonify(response)
 
+@app.route('/api/cars/number/<int:car_number>', methods=['GET'])
+def get_car_by_number(car_number):
+    car_query = """
+    SELECT c.*, t.name as team_name, t.team_id, 
+           d.driver_id, p.name as driver_name
+    FROM Car c
+    LEFT JOIN Team t ON c.team_id = t.team_id
+    LEFT JOIN Driver d ON c.driver_id = d.driver_id
+    LEFT JOIN Person p ON d.nif = p.nif
+    WHERE c.number = ?
+    """
+    car = execute_query(car_query, (car_number,))
+    if not car:
+        return jsonify({'error': 'Car not found'}), 404
+    
+    mechanics_query = """
+    SELECT m.mechanic_id, p.name, m.specialty
+    FROM Works_On w
+    JOIN Mechanic m ON w.mechanic_id = m.mechanic_id
+    JOIN Person p ON m.nif = p.nif
+    WHERE w.car_id = ?
+    """
+    mechanics = execute_query(mechanics_query, (car[0]['car_id'],))
+    
+    response = {
+        'car_id': car[0]['car_id'],
+        'number': car[0]['number'],
+        'chassis_model': car[0]['chassis_model'],
+        'engine_type': car[0]['engine_type'],
+        'weight': float(car[0]['weight']) if car[0]['weight'] is not None else 0.0,
+        'manufacture_date': car[0]['manufacture_date'].isoformat() if car[0]['manufacture_date'] else None,
+        'team': {
+            'team_id': car[0]['team_id'],
+            'name': car[0]['team_name']
+        },
+        'driver': {
+            'driver_id': car[0]['driver_id'],
+            'name': car[0]['driver_name']
+        } if car[0]['driver_id'] else None,
+        'mechanics': mechanics
+    }
+    
+    return jsonify(response)
+
 # Race #
 # POST
 @app.route('/api/races', methods=['POST'])
@@ -843,6 +924,38 @@ def get_race(race_id):
     race[0]['results'] = participations
     
     return jsonify(race[0])
+
+@app.route('/api/races/circuit/<string:circuit>', methods=['GET'])
+def get_race_by_circuit(circuit):
+    race_query = """
+    SELECT 
+        r.race_id,
+        r.circuit,
+        r.date,
+        r.track,
+        r.weather_conditions,
+        COUNT(p.race_id) as participation_count
+    FROM Race r
+    LEFT JOIN Participation p ON r.race_id = p.race_id
+    WHERE r.circuit = ?
+    GROUP BY r.race_id, r.circuit, r.date, r.track, r.weather_conditions
+    ORDER BY r.date DESC
+    """
+    races = execute_query(race_query, (circuit,))
+    
+    if not races:
+        return jsonify({'error': 'Race not found'}), 404
+    
+    formatted_races = []
+    for race in races:
+        formatted_race = {
+            **race,
+            'date': race['date'].isoformat() if race['date'] else None,
+            'participation_count': race['participation_count'] or 0
+        }
+        formatted_races.append(formatted_race)
+    
+    return jsonify(formatted_races)
 
 ## Relationships
 # Participation #

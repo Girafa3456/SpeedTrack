@@ -18,7 +18,7 @@ import {
   MenuItem
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
-import { getCars, createCar, updateCar, deleteCar, getTeams, getDrivers } from '../../services/api.ts';
+import { getCars, createCar, updateCar, deleteCar, getTeams, getDrivers, getCarByNumber } from '../../services/api.ts';
 import { Car, Team, Driver } from '../../interfaces/types';
 
 interface DriverWithDetails extends Driver {
@@ -149,19 +149,58 @@ const CarList: React.FC = () => {
     }
   };
 
+  const handleCarNumberSearch = async (value: string) => {
+    if (!value) {
+      fetchData(); // Reset to all cars if input is cleared
+      return;
+    }
+
+    const carNumber = parseInt(value);
+      if (isNaN(carNumber)) return;
+
+      try {
+        const carData = await getCarByNumber(carNumber);
+        const formattedCar: CarWithDetails = {
+          car_id: carData.car_id,
+          number: carData.number,
+          chassis_model: carData.chassis_model,
+          engine_type: carData.engine_type,
+          weight: carData.weight,
+          manufacture_date: carData.manufacture_date,
+          team_id: carData.team?.team_id || 0,
+          team_name: carData.team?.name || '',
+          driver_id: carData.driver?.driver_id || 0,
+          driver_name: carData.driver?.name || 'Unassigned'
+        };
+        setCars([formattedCar]);
+      } catch (error) {
+        console.error('Car not found or error fetching:', error);
+        setCars([]);
+      }
+    };
+
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          startIcon={<Add />}
-          onClick={handleOpenAddDialog}
-        >
-          Add Car
-        </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <TextField
+          label="Search by Car Number"
+          type="number"
+          variant="outlined"
+          size="small"
+          onChange={(e) => handleCarNumberSearch(e.target.value)}
+          sx={{ mb: 2, width: '200px' }}
+        />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<Add />}
+            onClick={handleOpenAddDialog}
+          >
+            Add Car
+          </Button>
+        </Box>
       </Box>
-
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
