@@ -276,8 +276,10 @@ const SponsorsList: React.FC = () => {
               required
             />
             <TextField
-              label="Birth Date (YYYY-MM-DD)"
+              label="Birth Date"
               name="birth_date"
+              type="date"
+              InputLabelProps={{ shrink: true }}
               value={newPerson.birth_date}
               onChange={handlePersonInputChange}
               fullWidth

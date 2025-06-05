@@ -1328,7 +1328,7 @@ def get_belongs():
         b['end_date'] = b['end_date'].isoformat() if b['end_date'] else None
     return jsonify(belongs)
 
-
+# Stored Procedures and UDFs
 @app.route('/api/teams/report', methods=['GET'])
 def get_teams_report():
     try:

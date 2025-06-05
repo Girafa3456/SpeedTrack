@@ -219,7 +219,7 @@ const MechanicList: React.FC = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
             <TextField label="NIF" name="nif" value={newPerson.nif} onChange={handlePersonInputChange} fullWidth required />
             <TextField label="Name" name="name" value={newPerson.name} onChange={handlePersonInputChange} fullWidth required />
-            <TextField label="Birth Date (YYYY-MM-DD)" name="birth_date" value={newPerson.birth_date} onChange={handlePersonInputChange} fullWidth required />
+            <TextField label="Birth Date" name="birth_date" type="date" InputLabelProps={{ shrink: true }} value={newPerson.birth_date} onChange={handlePersonInputChange} fullWidth required/>
             <TextField label="Nationality" name="nationality" value={newPerson.nationality} onChange={handlePersonInputChange} fullWidth required />
           </Box>
         </DialogContent>
